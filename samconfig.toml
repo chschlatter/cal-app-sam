@@ -19,7 +19,7 @@ confirm_changeset = true
 resolve_s3 = true
 s3_prefix = "cal-app-sam"
 region = "eu-central-2"
-parameter_overrides = "EventsTable=\"cal_events\""
+parameter_overrides = "EventsTable=\"cal_events\" LocksTable=\"cal_locks\""
 image_repositories = []
 
 [default.package.parameters]

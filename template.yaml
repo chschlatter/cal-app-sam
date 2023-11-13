@@ -19,6 +19,10 @@ Parameters:
     Type: String
     Description: The DynamoDB table name to store events
     Default: cal_events
+  LocksTable:
+    Type: String
+    Description: The DynamoDB table name to store locks
+    Default: cal_locks
 
 Resources:
   # This is a Lambda function config associated with the source code: listEvents.handler.js
@@ -44,6 +48,100 @@ Resources:
           Properties:
             Path: /events
             Method: GET
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        External: ["@aws-sdk"]
+  # This is a Lambda function config associated with the source code: createEvent.handler.js
+  createEvent:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/createEvent.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 100
+      Description: Create a new event
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref EventsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref LocksTable
+      Environment:
+        Variables:
+          EVENTS_TABLE: !Ref EventsTable
+          LOCKS_TABLE: !Ref LocksTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /events
+            Method: POST
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        External: ["@aws-sdk"]
+  # This is a Lambda function config associated with the source code: updateEvent.handler.js
+  updateEvent:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/updateEvent.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 100
+      Description: Update an event
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref EventsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref LocksTable
+      Environment:
+        Variables:
+          EVENTS_TABLE: !Ref EventsTable
+          LOCKS_TABLE: !Ref LocksTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /events/{id}
+            Method: PUT
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        External: ["@aws-sdk"]
+  # This is a Lambda function config associated with the source code: deleteEvent.handler.js
+  deleteEvent:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/deleteEvent.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 100
+      Description: Delete an event
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref EventsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref LocksTable
+      Environment:
+        Variables:
+          EVENTS_TABLE: !Ref EventsTable
+          LOCKS_TABLE: !Ref LocksTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /events/{id}
+            Method: DELETE
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        External: ["@aws-sdk"]
 
 Outputs:
   WebEndpoint:
