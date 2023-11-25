@@ -19,6 +19,10 @@ Parameters:
     Type: String
     Description: The DynamoDB table name to store events
     Default: cal_events
+  UsersTable:
+    Type: String
+    Description: The DynamoDB table name to store users
+    Default: cal_users
   LocksTable:
     Type: String
     Description: The DynamoDB table name to store locks
@@ -33,20 +37,23 @@ Resources:
       Runtime: nodejs18.x
       Architectures:
         - x86_64
-      MemorySize: 128
+      MemorySize: 1024
       Timeout: 100
       Description: List events between two dates
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref EventsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UsersTable
       Environment:
         Variables:
           EVENTS_TABLE: !Ref EventsTable
+          USERS_TABLE: !Ref UsersTable
       Events:
         Api:
           Type: Api
           Properties:
-            Path: /events
+            Path: /api/events
             Method: GET
     Metadata:
       BuildMethod: esbuild
@@ -60,7 +67,7 @@ Resources:
       Runtime: nodejs18.x
       Architectures:
         - x86_64
-      MemorySize: 128
+      MemorySize: 1024
       Timeout: 100
       Description: Create a new event
       Policies:
@@ -76,7 +83,7 @@ Resources:
         Api:
           Type: Api
           Properties:
-            Path: /events
+            Path: /api/events
             Method: POST
     Metadata:
       BuildMethod: esbuild
@@ -90,7 +97,7 @@ Resources:
       Runtime: nodejs18.x
       Architectures:
         - x86_64
-      MemorySize: 128
+      MemorySize: 1024
       Timeout: 100
       Description: Update an event
       Policies:
@@ -106,7 +113,7 @@ Resources:
         Api:
           Type: Api
           Properties:
-            Path: /events/{id}
+            Path: /api/events/{id}
             Method: PUT
     Metadata:
       BuildMethod: esbuild
@@ -120,7 +127,7 @@ Resources:
       Runtime: nodejs18.x
       Architectures:
         - x86_64
-      MemorySize: 128
+      MemorySize: 1024
       Timeout: 100
       Description: Delete an event
       Policies:
@@ -136,8 +143,57 @@ Resources:
         Api:
           Type: Api
           Properties:
-            Path: /events/{id}
+            Path: /api/events/{id}
             Method: DELETE
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        External: ["@aws-sdk"]
+  # This is a Lambda function config associated with the source code: auth.handler.js
+  auth:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/auth.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 1024
+      Timeout: 100
+      Description: Authenticate a user
+      Environment:
+        Variables:
+          JWT_SECRET: "{{resolve:ssm:/cal-app-sam/JWT_SECRET}}"
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /api/auth
+            Method: GET
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        External: ["@aws-sdk"]
+  # This is a Lambda function config associated with the source code: login.handler.js
+  login:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/login.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 1024
+      Timeout: 100
+      Description: Login a user
+      Environment:
+        Variables:
+          JWT_SECRET: "{{resolve:ssm:/cal-app-sam/JWT_SECRET}}"
+          PW_HMAC_KEY: "{{resolve:ssm:/cal-app-sam/PW_HMAC_KEY}}"
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /api/login
+            Method: POST
     Metadata:
       BuildMethod: esbuild
       BuildProperties:

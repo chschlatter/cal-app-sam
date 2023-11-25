@@ -1,10 +1,13 @@
 "use strict";
 
+// set start to time in ms
+const start = new Date().getTime();
 // Create a DocumentClient that represents the query to add an item
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
 const { DynamoDBDocumentClient } = require("@aws-sdk/lib-dynamodb");
 const client = new DynamoDBClient({});
 exports.ddbDocClient = DynamoDBDocumentClient.from(client);
+console.log("dynDocClient (ms): ", new Date().getTime() - start);
 
 const createError = require("http-errors");
 const Ajv = require("ajv/dist/jtd");

@@ -1,0 +1,11 @@
+{
+  "Christian": {
+    "role": "admin",
+    "color": "red",
+    "password": "d5bc0b0fdc9d9427e63b8b0e543cc60af6e00ab47685661ec3aa8069a7142b71"
+  },
+  "Nils": {
+    "role": "user",
+    "color": "green"
+  }
+}

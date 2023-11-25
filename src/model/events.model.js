@@ -1,4 +1,4 @@
-"use strict"; // Path: models/events.js
+"use strict";
 
 const createError = require("http-errors");
 const {
@@ -11,6 +11,9 @@ const {
 const dynamoLock = require("../dynamo-lock").dynamoLock;
 const { v4: uuidv4 } = require("uuid");
 const dayjs = require("dayjs");
+const { ddbDocClient } = require("../api");
+const users = require("../../users.json");
+
 /*
 const dayjs = require("dayjs");
 const dynamoLock = require("../dynamo-lock").dynamoLock;
@@ -40,7 +43,10 @@ const list = async (start, end, dynDocClient, tableName) => {
     },
   };
   const data = await dynDocClient.send(new QueryCommand(params));
-  return data.Items;
+  return data.Items.map((item) => {
+    item.color = users[item.title] ? users[item.title].color : "blue";
+    return item;
+  });
 };
 
 const create = async (event, dynDocClient, tableName) => {

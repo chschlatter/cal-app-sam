@@ -29,7 +29,9 @@ const lambdaHandler = async (event) => {
   const start = event.queryStringParameters.start;
   const end = event.queryStringParameters.end;
 
+  const startTime = new Date().getTime();
   const items = await events.list(start, end, api.ddbDocClient, tableName);
+  console.log("events.list() (ms):", new Date().getTime() - startTime);
 
   const response = {
     statusCode: 200,
