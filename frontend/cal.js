@@ -201,6 +201,7 @@ function save_event(e) {
         if (cal_event != null) {
           cal_event.setDates(event.start, event.end, { allDay: true });
           cal_event.setProp("title", event.title);
+          cal_event.setProp("color", event_updated.color);
         }
         $("#event-modal").modal("hide");
       },

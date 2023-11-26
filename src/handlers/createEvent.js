@@ -1,38 +1,44 @@
 "use strict";
 
 const createError = require("http-errors");
-const api = require("../api");
+const db = require("../db");
+const handlerHelper = require("../handlerHelper");
+const users = require("../../users.json");
+const access = require("../accessControl");
 
 // Get the DynamoDB table name from environment variables
 const eventsTable = process.env.EVENTS_TABLE;
-
 const events = require("../model/events.model");
 
-// ajv jtd event schema used for input validation
+// body schema for the POST request
 const bodySchema = {
-  properties: {
-    title: { type: "string" },
-    start: { type: "timestamp" },
-    end: { type: "timestamp" },
-  },
+  title: { type: "string", required: true },
+  start: { type: "ISOdate", required: true },
+  end: { type: "ISOdate", required: true },
 };
 
 // AWS Lambda function handler to create an event in a DynamoDB table
-const lambdaHandler = async (event) => {
+const createEvent = async (event) => {
+  // wait for db to be initialized
+  await db.dbInitPromise;
+
   if (event.httpMethod !== "POST") {
     throw new createError.BadRequest(
       "listEvents.handler only accepts POST method"
     );
   }
 
-  event = await events.create(event.bodyParsed, api.ddbDocClient, eventsTable);
+  access.authenticate(event, { name: event.bodyParsed.title });
 
-  const response = {
+  event = await events.create(event.bodyParsed, db.client, eventsTable);
+  event.color = users[event.title].color;
+
+  return {
     statusCode: 200,
     body: JSON.stringify(event),
   };
-
-  return response;
 };
 
-exports.handler = api.apiHandler(lambdaHandler, { bodySchema: bodySchema });
+exports.handler = handlerHelper.apiHandler(createEvent, {
+  bodySchema: bodySchema,
+});

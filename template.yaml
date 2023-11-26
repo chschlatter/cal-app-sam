@@ -6,12 +6,15 @@ Transform:
   - AWS::Serverless-2016-10-31
 
 Globals:
-  Api:
-    Cors:
-      AllowMethods: "'GET,POST,OPTIONS'"
-      AllowHeaders: "'content-type'"
-      AllowOrigin: "'*'"
-      # AllowCredentials: true  Uncomment only if you choose a specific origin instead of the * wildcard.
+  Function:
+    Timeout: 100
+    Runtime: nodejs18.x
+    MemorySize: 1024
+    Architectures:
+      - x86_64
+    Environment:
+      Variables:
+        JWT_SECRET: "{{resolve:ssm:/cal-app-sam/JWT_SECRET}}"
 
 Parameters:
   # This is a DynamoDB table config
@@ -19,10 +22,6 @@ Parameters:
     Type: String
     Description: The DynamoDB table name to store events
     Default: cal_events
-  UsersTable:
-    Type: String
-    Description: The DynamoDB table name to store users
-    Default: cal_users
   LocksTable:
     Type: String
     Description: The DynamoDB table name to store locks
@@ -34,21 +33,13 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Handler: src/handlers/listEvents.handler
-      Runtime: nodejs18.x
-      Architectures:
-        - x86_64
-      MemorySize: 1024
-      Timeout: 100
       Description: List events between two dates
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref EventsTable
-        - DynamoDBCrudPolicy:
-            TableName: !Ref UsersTable
       Environment:
         Variables:
           EVENTS_TABLE: !Ref EventsTable
-          USERS_TABLE: !Ref UsersTable
       Events:
         Api:
           Type: Api
@@ -64,11 +55,6 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Handler: src/handlers/createEvent.handler
-      Runtime: nodejs18.x
-      Architectures:
-        - x86_64
-      MemorySize: 1024
-      Timeout: 100
       Description: Create a new event
       Policies:
         - DynamoDBCrudPolicy:
@@ -94,11 +80,6 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Handler: src/handlers/updateEvent.handler
-      Runtime: nodejs18.x
-      Architectures:
-        - x86_64
-      MemorySize: 1024
-      Timeout: 100
       Description: Update an event
       Policies:
         - DynamoDBCrudPolicy:
@@ -124,11 +105,6 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Handler: src/handlers/deleteEvent.handler
-      Runtime: nodejs18.x
-      Architectures:
-        - x86_64
-      MemorySize: 1024
-      Timeout: 100
       Description: Delete an event
       Policies:
         - DynamoDBCrudPolicy:
@@ -149,20 +125,28 @@ Resources:
       BuildMethod: esbuild
       BuildProperties:
         External: ["@aws-sdk"]
+  # This is a Lambda function config associated with the source code: listUsers.handler.js
+  listUsers:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/listUsers.handler
+      Description: List users
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /api/users
+            Method: GET
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        External: ["@aws-sdk"]
   # This is a Lambda function config associated with the source code: auth.handler.js
   auth:
     Type: AWS::Serverless::Function
     Properties:
       Handler: src/handlers/auth.handler
-      Runtime: nodejs18.x
-      Architectures:
-        - x86_64
-      MemorySize: 1024
-      Timeout: 100
       Description: Authenticate a user
-      Environment:
-        Variables:
-          JWT_SECRET: "{{resolve:ssm:/cal-app-sam/JWT_SECRET}}"
       Events:
         Api:
           Type: Api
@@ -178,15 +162,9 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Handler: src/handlers/login.handler
-      Runtime: nodejs18.x
-      Architectures:
-        - x86_64
-      MemorySize: 1024
-      Timeout: 100
       Description: Login a user
       Environment:
         Variables:
-          JWT_SECRET: "{{resolve:ssm:/cal-app-sam/JWT_SECRET}}"
           PW_HMAC_KEY: "{{resolve:ssm:/cal-app-sam/PW_HMAC_KEY}}"
       Events:
         Api:

@@ -11,15 +11,7 @@ const {
 const dynamoLock = require("../dynamo-lock").dynamoLock;
 const { v4: uuidv4 } = require("uuid");
 const dayjs = require("dayjs");
-const { ddbDocClient } = require("../api");
 const users = require("../../users.json");
-
-/*
-const dayjs = require("dayjs");
-const dynamoLock = require("../dynamo-lock").dynamoLock;
-const { v4: uuidv4 } = require("uuid");
-const users = require("./users");
-*/
 
 const list = async (start, end, dynDocClient, tableName) => {
   if (!start || !end) {
@@ -50,18 +42,10 @@ const list = async (start, end, dynDocClient, tableName) => {
 };
 
 const create = async (event, dynDocClient, tableName) => {
-  // TBD: Non-admin users can only create events for themselves
-  // if (user.role == "user") {
-  //   event.title = user.name;
-  // }
-
   // lock cal_events table
   const unlock = await dynamoLock(dynDocClient, tableName);
 
   try {
-    // check if event title is a known user
-    // await users.get(event.title, dynDocClient);
-
     // check if event overlaps with another
     await checkOverlaps(event, dynDocClient, tableName);
 
@@ -142,26 +126,9 @@ const update = async (event, dynDocClient, tableName) => {
     },
   };
 
-  // Non-admin users can only update their own events
-  /*
-  if (user.role == "user") {
-    const existingEvent = await get(event.id, dynDocClient);
-    if (existingEvent.title !== user.name) {
-      throw new ApiError(
-        global.httpStatus.FORBIDDEN,
-        "api-020",
-        "Not authorized"
-      );
-    }
-  }
-  */
-
   // lock cal_events table
   const unlock = await dynamoLock(dynDocClient, tableName);
   try {
-    // check if event title is a known user
-    // await users.get(event.title, dynDocClient);
-
     // check if event overlaps with another
     await checkOverlaps(event, dynDocClient, tableName);
     // update event
@@ -189,20 +156,6 @@ const remove = async (eventId, dynDocClient, tableName) => {
     },
   };
 
-  // Non-admin users can only delete their own events
-  /*
-  if (user.role == "user") {
-    const event = await get(eventId, dynDocClient);
-    if (event.title !== user.name) {
-      throw new ApiError(
-        global.httpStatus.FORBIDDEN,
-        "api-020",
-        "Not authorized"
-      );
-    }
-  }
-  */
-
   try {
     await dynDocClient.send(new DeleteCommand(params));
   } catch (err) {
@@ -214,10 +167,9 @@ const remove = async (eventId, dynDocClient, tableName) => {
   }
 };
 
-/*
-const get = async (eventId, dynDocClient) => {
+const get = async (eventId, dynDocClient, tableName) => {
   const params = {
-    TableName: "cal_events",
+    TableName: tableName,
     Key: {
       id: eventId,
     },
@@ -225,20 +177,15 @@ const get = async (eventId, dynDocClient) => {
 
   const data = await dynDocClient.send(new GetCommand(params));
   if (!data.Item) {
-    throw new ApiError(
-      global.httpStatus.NOT_FOUND,
-      "event-011",
-      "Event not found"
-    );
+    throw new createError(404, "Event not found");
   }
   return data.Item;
 };
-*/
 
 module.exports = {
   list,
   create,
   update,
-  // get,
+  get,
   remove,
 };
