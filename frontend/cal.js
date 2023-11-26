@@ -11,6 +11,12 @@ $(document).ready(() => {
     type: "get",
     success: (user) => {
       console.log("user: " + JSON.stringify(user));
+
+      // warmup API functions
+      warmupApiFunction(apiUrl + "/events", "post");
+      warmupApiFunction(apiUrl + "/events/XXX", "put");
+      warmupApiFunction(apiUrl + "/events/XXX", "delete");
+
       username = user.name;
       $("#username").text(username);
       role = user.role;
@@ -81,6 +87,30 @@ $(document).ready(() => {
     calendar.refetchEvents();
   }, 10000);
 });
+
+function warmupApiFunction(uri, method) {
+  $.ajax({
+    url: uri + "?warmup=true",
+    contentType: "application/json; charset=utf-8",
+    dataType: "json",
+    type: method,
+    success: function (response) {
+      console.log(
+        "warmupApiFunction(" +
+          uri +
+          ", " +
+          method +
+          "): " +
+          JSON.stringify(response)
+      );
+    },
+    error: function (xhr) {
+      console.log(
+        "warmupApiFunction(" + uri + ", " + method + "): " + xhr.responseText
+      );
+    },
+  });
+}
 
 function cal_on_select(info) {
   $("#input-start-date").val(info.startStr);

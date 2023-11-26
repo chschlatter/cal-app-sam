@@ -14,6 +14,16 @@ exports.apiHandler = (handler, options = {}) => {
         body: event.body,
       });
 
+      // handle warm up events
+      if (event.queryStringParameters?.warmup) {
+        return {
+          statusCode: 200,
+          body: JSON.stringify({
+            message: "Warm up event received",
+          }),
+        };
+      }
+
       if (options.bodySchema) {
         const body = JSON.parse(event.body);
         Object.entries(options.bodySchema).forEach(([key, value]) => {

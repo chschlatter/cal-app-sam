@@ -28,6 +28,7 @@ const createEvent = async (event) => {
     );
   }
 
+  // authenticate user
   access.authenticate(event, { name: event.bodyParsed.title });
 
   event = await events.create(event.bodyParsed, db.client, eventsTable);
