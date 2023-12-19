@@ -54,6 +54,7 @@ exports.apiHandler = (handler, options = {}) => {
         }),
       };
 
+      // err properties are statusCode, message, and data
       if (createError.isHttpError(err)) {
         response = {
           statusCode: err.statusCode,

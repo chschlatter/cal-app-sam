@@ -5,14 +5,10 @@
   "private": true,
   "dependencies": {
     "dayjs": "^1.11.10",
+    "esbuild": "^0.19.8",
     "http-errors": "^2.0.0",
     "jsonwebtoken": "^9.0.2",
     "uuid": "^9.0.1"
   },
-  "scripts": {
-    "deploy_frontend": "aws s3 sync frontend/ s3://kalender.schlatter.net --delete"
-  },
-  "devDependencies": {
-    "esbuild": "0.19.7"
-  }
+  "scripts": {}
 }

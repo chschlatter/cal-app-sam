@@ -1,0 +1,5 @@
+[
+  { "from": "2023-10-14", "price": 60.0, "tariff": "Winter" },
+  { "from": "2024-04-20", "price": 40.0, "tariff": "Sommer" },
+  { "from": "2024-10-19", "price": 60.0, "tariff": "Winter" }
+]

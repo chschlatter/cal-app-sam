@@ -176,6 +176,22 @@ Resources:
       BuildMethod: esbuild
       BuildProperties:
         External: ["@aws-sdk"]
+  # This is a Lambda function config associated with the source code: getPrices.handler.js
+  getPrices:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/getPrices.handler
+      Description: Get prices
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /api/prices
+            Method: GET
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        External: ["@aws-sdk"]
 
 Outputs:
   WebEndpoint:
