@@ -13,6 +13,22 @@ const cookieAuth = require("./cookieAuth");
 const createError = require("http-errors");
 
 /**
+ * @class AccessError
+ * @classdesc Custom error class for access control
+ * @extends {Error}
+ */
+class AccessError extends Error {
+  /**
+   * @param {string} message
+   * @param {"unauthorized"} errorCode
+   */
+  constructor(message, errorCode) {
+    super(message);
+    this.code = errorCode;
+  }
+}
+
+/**
  * Authenticate user
  * @param {import("aws-lambda").APIGatewayProxyEvent} apiEvent - HTTP request
  * @param {Object} options - Options
@@ -45,11 +61,12 @@ const authenticate = (apiEvent, options = {}) => {
     return accessTokenParsed;
   } catch (err) {
     console.log(err);
-    throw new createError.Unauthorized("Unauthorized");
+    throw new AccessError("Unauthorized", "unauthorized");
   }
 };
 
 module.exports = {
   authenticate,
   users,
+  AccessError,
 };

@@ -4,6 +4,7 @@ const createError = require("http-errors");
 const handlerHelper = require("../handlerHelper");
 const access = require("../accessControl");
 const { EventsModel } = require("../model/events2.model");
+const i18n = require("../i18n");
 
 /**
  * body schema for the POST request
@@ -23,7 +24,10 @@ const bodySchema = {
 const createEvent = async (apiEvent) => {
   if (apiEvent.httpMethod !== "POST") {
     throw new createError.BadRequest(
-      "listEvents.handler only accepts POST method"
+      i18n.t("error.wrongMethod", {
+        handler: "createEvent.handler",
+        method: "POST",
+      })
     );
   }
 

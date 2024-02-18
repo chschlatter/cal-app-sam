@@ -1,6 +1,9 @@
 "use strict";
 
 const createError = require("http-errors");
+const { EventsError } = require("./model/events2.model");
+const { AccessError } = require("./accessControl");
+const i18n = require("./i18n");
 
 /**
  * @typedef {Object} ApiEventParsed
@@ -64,23 +67,71 @@ exports.apiHandler = (handler, options = {}) => {
 
       response = await handler(event);
     } catch (err) {
-      response = {
-        statusCode: 500,
-        body: JSON.stringify({
-          message: "Internal server error",
-        }),
-      };
-
-      // err properties are statusCode, message, and data
-      if (createError.isHttpError(err)) {
-        response = {
-          statusCode: err.statusCode,
-          body: JSON.stringify(err),
-        };
-      }
-
-      console.log(err);
+      response = handleErrors(err);
     }
+
     return response;
   };
+};
+
+/**
+ * Handle errors and return an HTTP response
+ * @param {Object} err
+ * @returns {import("aws-lambda").APIGatewayProxyResult}
+ */
+const handleErrors = (err) => {
+  let response = {
+    statusCode: 500,
+    body: JSON.stringify({
+      message: i18n.t("error.internalServerError"),
+    }),
+  };
+
+  if (err instanceof EventsError) {
+    switch (err.code) {
+      case "start_end_required":
+        err = new createError.BadRequest(i18n.t("error.listEvents.startEnd"));
+        break;
+      case "event_not_found":
+        err = new createError.NotFound(i18n.t("error.eventNotFound"));
+        break;
+      case "event_overlaps":
+        err = createError(409, i18n.t("error.eventOverlaps"), err.data);
+        break;
+      case "event_max_days":
+        err = createError(
+          400,
+          i18n.t("error.eventMaxDays", { maxDays: err.data.maxDays }),
+          err.data
+        );
+        break;
+      default:
+        err = new createError.InternalServerError(
+          i18n.t("error.unknownEventError", { message: err.message })
+        );
+    }
+  }
+
+  if (err instanceof AccessError) {
+    switch (err.code) {
+      case "unauthorized":
+        err = new createError.Unauthorized(i18n.t("error.unauthorized"));
+        break;
+      default:
+        err = new createError.InternalServerError(
+          i18n.t("error.unknownAccessError", { message: err.message })
+        );
+    }
+  }
+
+  // err properties are statusCode, message, and data
+  if (createError.isHttpError(err)) {
+    response = {
+      statusCode: err.statusCode,
+      body: JSON.stringify(err),
+    };
+  }
+
+  console.log(err);
+  return response;
 };

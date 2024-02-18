@@ -4,6 +4,7 @@ const createError = require("http-errors");
 const handlerHelper = require("../handlerHelper");
 const access = require("../accessControl");
 const { EventsModel } = require("../model/events2.model");
+const i18n = require("../i18n");
 
 /**
  * body schema for the PUT request
@@ -24,13 +25,16 @@ const bodySchema = {
 const updateEvent = async (apiEvent) => {
   if (apiEvent.httpMethod !== "PUT") {
     throw new createError.BadRequest(
-      "listEvents.handler only accepts POST method"
+      i18n.t("error.wrongMethod", {
+        handler: "updateEvent.handler",
+        method: "PUT",
+      })
     );
   }
 
   const eventId = apiEvent.pathParameters?.id;
   if (eventId === undefined) {
-    throw new createError.BadRequest("Please provide id in path");
+    throw new createError.BadRequest(i18n.t("error.missingIdinPath"));
   }
 
   const events = new EventsModel();

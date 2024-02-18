@@ -1,21 +1,23 @@
-"use strict";
+// @ts-check
 
 const handlerHelper = require("../handlerHelper");
 const createError = require("http-errors");
 const access = require("../accessControl");
+const i18n = require("../i18n");
 
-const auth = async (event) => {
-  return authHandler(event);
-};
-
-exports.handler = handlerHelper.apiHandler(auth);
-
-const authHandler = async (event) => {
-  if (event.httpMethod !== "GET") {
-    throw new createError.BadRequest("auth.handler only accepts GET method");
+/**
+ * AWS Lambda function handler to authenticate a user
+ * @param {handlerHelper.ApiEventParsed} apiEvent - HTTP request with body parsed
+ * @returns {Promise<import("aws-lambda").APIGatewayProxyResult>} - AWS Lambda HTTP response
+ */
+const auth = async (apiEvent) => {
+  if (apiEvent.httpMethod !== "GET") {
+    throw new createError.BadRequest(
+      i18n.t("error.wrongMethod", { handler: "auth.handler", method: "GET" })
+    );
   }
 
-  const user = access.authenticate(event);
+  const user = access.authenticate(apiEvent);
 
   return {
     statusCode: 200,
@@ -25,3 +27,5 @@ const authHandler = async (event) => {
     }),
   };
 };
+
+exports.handler = handlerHelper.apiHandler(auth);

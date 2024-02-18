@@ -4,6 +4,7 @@ const handlerHelper = require("../handlerHelper");
 const createError = require("http-errors");
 const access = require("../accessControl");
 const { EventsModel } = require("../model/events2.model");
+const i18n = require("../i18n");
 
 /**
  * AWS Lambda function handler to list events in a DynamoDB table
@@ -13,7 +14,10 @@ const { EventsModel } = require("../model/events2.model");
 const listEvents = async (apiEvent) => {
   if (apiEvent.httpMethod !== "GET") {
     throw new createError.BadRequest(
-      "listEvents.handler only accepts GET method"
+      i18n.t("error.wrongMethod", {
+        handler: "listEvents.handler",
+        method: "GET",
+      })
     );
   }
 
@@ -23,9 +27,7 @@ const listEvents = async (apiEvent) => {
   const end = apiEvent.queryStringParameters?.end;
 
   if (!start || !end) {
-    throw new createError.BadRequest(
-      "Please provide start and end query params"
-    );
+    throw new createError.BadRequest(i18n.t("error.listEvents.startEnd"));
   }
 
   const events = new EventsModel();

@@ -13,12 +13,15 @@ const dayjs = require("dayjs");
 const users = require("../../users.json");
 const { dynamoLock2 } = require("../dynamo-lock");
 const { initDB } = require("../db2");
+const i18n = require("../i18n");
 
 const maxDays = 100;
 
 /**
  * @typedef {import("../db2").DB} DB
- *
+ */
+
+/**
  * @typedef {Object} Event
  * @property {string} id
  * @property {string} title
@@ -28,10 +31,26 @@ const maxDays = 100;
  * @property {string} [color]
  */
 
+export class EventsError extends Error {
+  /**
+   * @param {string} message
+   * @param {"start_end_required"|"event_not_found"|"event_overlaps"|"event_max_days"} errorCode
+   * @param {Object} [data]
+   * @param {boolean} [data.overlap_start]
+   * @param {boolean} [data.overlap_end]
+   * @param {number} [data.maxDays]
+   */
+  constructor(message, errorCode, data = {}) {
+    super(message);
+    this.code = errorCode;
+    this.data = data;
+  }
+}
+
 /**
  * @class EventsModel
  * @classdesc A class to handle events in a DynamoDB table
- * @property {Object} #db - The DynamoDB client
+ * @property {Object} #db - The database connection
  */
 export class EventsModel {
   /**
@@ -52,8 +71,9 @@ export class EventsModel {
    */
   async list(start, end) {
     if (!start || !end) {
-      throw new createError.BadRequest(
-        "Please provide start and end query params"
+      throw new EventsError(
+        "start and end params are required",
+        "start_end_required"
       );
     }
 
@@ -77,7 +97,7 @@ export class EventsModel {
    * Create a new event
    * @param {Event} event - event to create
    * @returns {Promise<Event>} - created event
-   * @throws {createError.BadRequest} - If event overlaps with another
+   * @throws {EventException} - If event duration is greater than maxDays
    * @throws {Error} - If DynamoDB operation fails
    */
   async create(event) {
@@ -105,8 +125,7 @@ export class EventsModel {
    * Update an event
    * @param {Event} event - event to update
    * @returns {Promise<Event>} - updated event
-   * @throws {createError.BadRequest} - If event overlaps with another
-   * @throws {createError.NotFound} - If event not found
+   * @throws {EventException} - If event not found
    * @throws {Error} - If DynamoDB operation fails
    */
   async update(event) {
@@ -123,7 +142,7 @@ export class EventsModel {
         await (await this.#db.client).send(dbCmd);
       } catch (err) {
         if (err.code === "ResourceNotFoundException") {
-          throw createError(404, "Event not found");
+          throw new EventsError("Event not found", "event_not_found");
         } else {
           throw err;
         }
@@ -151,7 +170,7 @@ export class EventsModel {
     });
     const data = await (await this.#db.client).send(dbCmd);
     if (!data.Item) {
-      throw createError(404, "Event not found");
+      throw new EventsError("Event not found", "event_not_found");
     }
     return data.Item;
   }
@@ -159,7 +178,7 @@ export class EventsModel {
   /**
    * Remove an event
    * @param {string} eventId - event id
-   * @throws {createError.NotFound} - If event not found
+   * @throws {EventException} - If event not found
    * @throws {Error} - If DynamoDB operation fails
    * @returns {Promise<void>}
    */
@@ -174,7 +193,7 @@ export class EventsModel {
       await (await this.#db.client).send(dbCmd);
     } catch (err) {
       if (err.code === "ResourceNotFoundException") {
-        throw createError(404, "Event not found");
+        throw new EventsError("Event not found", "event_not_found");
       } else {
         throw err;
       }
@@ -212,7 +231,11 @@ export class EventsModel {
       });
 
       if (errorData.overlap_start || errorData.overlap_end) {
-        throw createError(409, "Event overlaps with another", errorData);
+        throw new EventsError(
+          "Event overlaps with another",
+          "event_overlaps",
+          errorData
+        );
       }
     }
   }
@@ -228,9 +251,10 @@ export class EventsModel {
     const endDate = new Date(event.end).getTime();
 
     if ((endDate - startDate) / (1000 * 60 * 60 * 24) > maxDays) {
-      throw createError(
-        400,
-        "Reservationen sind auf " + maxDays + " Nächte beschränkt"
+      throw new EventsError(
+        "Reservations are limited to " + maxDays + " nights",
+        "event_max_days",
+        { maxDays: maxDays }
       );
     }
   }
@@ -324,6 +348,6 @@ export class EventsModel {
         };
         return new QueryCommand(params);
     }
-    throw new Error("Invalid method: " + method);
+    throw new Error("#getDbCommand: Invalid method: " + method);
   }
 }
