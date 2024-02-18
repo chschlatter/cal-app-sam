@@ -1,11 +1,16 @@
-"use strict";
+// @ts-check
 
 const handlerHelper = require("../handlerHelper");
 const prices = require("../../prices.json");
 const access = require("../accessControl");
 
-const getPrices = async (event) => {
-  access.authenticate(event);
+/**
+ * AWS Lambda function handler to get prices from a JSON file
+ * @param {handlerHelper.ApiEventParsed} apiEvent - HTTP request with body parsed
+ * @returns {Promise<import("aws-lambda").APIGatewayProxyResult>} - AWS Lambda HTTP response
+ */
+const getPrices = async (apiEvent) => {
+  access.authenticate(apiEvent);
 
   return {
     statusCode: 200,

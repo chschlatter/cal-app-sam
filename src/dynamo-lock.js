@@ -7,7 +7,16 @@ const { PutCommand, DeleteCommand } = require("@aws-sdk/lib-dynamodb");
 
 const locksTable = process.env.LOCKS_TABLE;
 
-exports.dynamoLock = async function (dynamodbDocumentClient, resource) {
+/**
+ *
+ * @param {import("./db2").DB} db
+ * @returns {Promise<Function>}
+ */
+const dynamoLock2 = async (db) => {
+  return dynamoLock(await db.client, db.tableName);
+};
+
+const dynamoLock = async (dynamodbDocumentClient, resource) => {
   const lock = {
     resource: resource,
     Expiry: dayjs().add(30, "seconds").toISOString(),
@@ -45,7 +54,7 @@ exports.dynamoLock = async function (dynamodbDocumentClient, resource) {
   return unlock;
 };
 
-async function dynamoUnlock(dynamodbDocumentClient, resource) {
+const dynamoUnlock = async (dynamodbDocumentClient, resource) => {
   const params = {
     TableName: "cal_locks",
     Key: {
@@ -60,4 +69,6 @@ async function dynamoUnlock(dynamodbDocumentClient, resource) {
     console.log("Lock not released");
     throw err;
   }
-}
+};
+
+module.exports = { dynamoLock, dynamoLock2 };

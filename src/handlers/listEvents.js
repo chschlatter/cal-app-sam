@@ -1,28 +1,26 @@
-"use strict";
+// @ts-check
 
 const handlerHelper = require("../handlerHelper");
 const createError = require("http-errors");
-const db = require("../db");
 const access = require("../accessControl");
+const { EventsModel } = require("../model/events2.model");
 
-// Get the DynamoDB table name from environment variables
-const tableName = process.env.EVENTS_TABLE;
-const events = require("../model/events.model");
-
-const listEvents = async (event) => {
-  // wait for db to be initialized
-  await db.dbInitPromise;
-
-  if (event.httpMethod !== "GET") {
+/**
+ * AWS Lambda function handler to list events in a DynamoDB table
+ * @param {handlerHelper.ApiEventParsed} apiEvent - HTTP request with body parsed
+ * @returns {Promise<import("aws-lambda").APIGatewayProxyResult>} - AWS Lambda HTTP response
+ */
+const listEvents = async (apiEvent) => {
+  if (apiEvent.httpMethod !== "GET") {
     throw new createError.BadRequest(
       "listEvents.handler only accepts GET method"
     );
   }
 
-  access.authenticate(event);
+  access.authenticate(apiEvent);
 
-  const start = event.queryStringParameters?.start;
-  const end = event.queryStringParameters?.end;
+  const start = apiEvent.queryStringParameters?.start;
+  const end = apiEvent.queryStringParameters?.end;
 
   if (!start || !end) {
     throw new createError.BadRequest(
@@ -30,7 +28,8 @@ const listEvents = async (event) => {
     );
   }
 
-  const items = await events.list(start, end, db.client, tableName);
+  const events = new EventsModel();
+  const items = await events.list(start, end);
 
   return {
     statusCode: 200,

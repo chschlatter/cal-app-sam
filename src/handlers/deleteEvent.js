@@ -1,33 +1,32 @@
-"use strict";
+// @ts-check
 
-const db = require("../db");
+const createError = require("http-errors");
 const handlerHelper = require("../handlerHelper");
 const access = require("../accessControl");
+const { EventsModel } = require("../model/events2.model");
 
-// Get the DynamoDB table name from environment variables
-const eventsTable = process.env.EVENTS_TABLE;
-const events = require("../model/events.model");
-
-// AWS Lambda function handler to delete an event in a DynamoDB table
-const deleteEvent = async (event) => {
-  // wait for db to be initialized
-  await db.dbInitPromise;
-
-  if (event.httpMethod !== "DELETE") {
+/**
+ * AWS Lambda function handler to delete an event in a DynamoDB table
+ * @param {handlerHelper.ApiEventParsed} apiEvent - HTTP request with body parsed
+ * @returns {Promise<import("aws-lambda").APIGatewayProxyResult>} - AWS Lambda HTTP response
+ */
+const deleteEvent = async (apiEvent) => {
+  if (apiEvent.httpMethod !== "DELETE") {
     throw new createError.BadRequest(
       "deleteEvent.handler only accepts DELETE method"
     );
   }
 
-  event.id = event.pathParameters?.id;
-  if (event.id === undefined) {
+  const eventId = apiEvent.pathParameters?.id;
+  if (eventId === undefined) {
     throw new createError.BadRequest("Please provide id in path");
   }
 
-  const eventFromDb = await events.get(event.id, db.client, eventsTable);
-  access.authenticate(event, { name: eventFromDb.title });
+  const events = new EventsModel();
+  const eventFromDb = await events.get(eventId);
+  access.authenticate(apiEvent, { name: eventFromDb.title });
 
-  await events.remove(event.id, db.client, eventsTable);
+  await events.remove(eventId);
 
   return {
     statusCode: 200,

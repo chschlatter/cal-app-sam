@@ -4,11 +4,17 @@
   "version": "0.0.1",
   "private": true,
   "dependencies": {
+    "@simplewebauthn/server": "^8.3.5",
+    "cookie": "^0.6.0",
     "dayjs": "^1.11.10",
     "esbuild": "^0.19.8",
     "http-errors": "^2.0.0",
     "jsonwebtoken": "^9.0.2",
     "uuid": "^9.0.1"
   },
-  "scripts": {}
+  "scripts": {},
+  "devDependencies": {
+    "@aws-sdk/lib-dynamodb": "^3.511.0",
+    "@types/aws-lambda": "^8.10.133"
+  }
 }

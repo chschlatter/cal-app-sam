@@ -2,6 +2,23 @@
 
 const createError = require("http-errors");
 
+/**
+ * @typedef {Object} ApiEventParsed
+ * @extends {import("aws-lambda").APIGatewayProxyEvent}
+ * @property {Object} bodyParsed
+ *
+ * @typedef {Object.<string, {type: string, required: boolean}>} BodySchema
+ */
+
+/**
+ * This function is a wrapper around the AWS Lambda function handler.
+ * It logs the request and response, and handles errors.
+ * It also validates the request body against a schema if provided.
+ * @param {function} handler - the AWS Lambda function handler
+ * @param {object} options - an object containing the body schema
+ * @param {BodySchema} [options.bodySchema] - the body schema to validate the request body
+ * @returns {function} - the wrapped AWS Lambda function handler
+ */
 exports.apiHandler = (handler, options = {}) => {
   return async (event) => {
     let response;

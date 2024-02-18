@@ -1,16 +1,14 @@
-"use strict";
+// @ts-check
 
 const createError = require("http-errors");
-const db = require("../db");
 const handlerHelper = require("../handlerHelper");
-const users = require("../../users.json");
 const access = require("../accessControl");
+const { EventsModel } = require("../model/events2.model");
 
-// Get the DynamoDB table name from environment variables
-const eventsTable = process.env.EVENTS_TABLE;
-const events = require("../model/events.model");
-
-// body schema for the PUT request
+/**
+ * body schema for the PUT request
+ * @type {import("../handlerHelper").BodySchema}
+ */
 const bodySchema = {
   id: { type: "string", required: true },
   title: { type: "string", required: true },
@@ -18,27 +16,33 @@ const bodySchema = {
   end: { type: "ISOdate", required: true },
 };
 
-const updateEvent = async (event) => {
-  if (event.httpMethod !== "PUT") {
+/**
+ * AWS Lambda function handler to update an event in a DynamoDB table
+ * @param {handlerHelper.ApiEventParsed} apiEvent - HTTP request with body parsed
+ * @returns {Promise<import("aws-lambda").APIGatewayProxyResult>} - AWS Lambda HTTP response
+ */
+const updateEvent = async (apiEvent) => {
+  if (apiEvent.httpMethod !== "PUT") {
     throw new createError.BadRequest(
       "listEvents.handler only accepts POST method"
     );
   }
 
-  event.id = event.pathParameters?.id;
-  if (event.id === undefined) {
+  const eventId = apiEvent.pathParameters?.id;
+  if (eventId === undefined) {
     throw new createError.BadRequest("Please provide id in path");
   }
 
-  const eventFromDb = await events.get(event.id, db.client, eventsTable);
-  access.authenticate(event, { name: eventFromDb.title });
+  const events = new EventsModel();
+  const eventFromDb = await events.get(eventId);
+  access.authenticate(apiEvent, { name: eventFromDb.title });
 
-  event = await events.update(event.bodyParsed, db.client, eventsTable);
-  event.color = users[event.title].color;
+  const updatedEvent = await events.update(apiEvent.bodyParsed);
+  updatedEvent.color = access.users[updatedEvent.title].color;
 
   return {
     statusCode: 200,
-    body: JSON.stringify(event),
+    body: JSON.stringify(updatedEvent),
   };
 };
 

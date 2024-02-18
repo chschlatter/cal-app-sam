@@ -3,8 +3,9 @@
 const createError = require("http-errors");
 const handlerHelper = require("../handlerHelper");
 const users = require("../../users.json");
-const jwt = require("jsonwebtoken");
 const createHmac = require("crypto").createHmac;
+const { createSessionCookie } = require("../cookieAuth");
+const { getSecret } = require("../secrets");
 
 const login = async (event) => {
   if (event.httpMethod !== "POST") {
@@ -20,7 +21,7 @@ const login = async (event) => {
   }
 
   // check if body contains name
-  if (!body?.name) {
+  if (!body.name) {
     throw new createError.BadRequest("Missing login name");
   }
 
@@ -36,7 +37,7 @@ const login = async (event) => {
         code: "auth-012",
       });
     }
-    const hash = createHmac("sha256", process.env.PW_HMAC_KEY);
+    const hash = createHmac("sha256", getSecret("PW_HMAC_KEY"));
     hash.update(body.password);
     if (hash.digest("hex") !== users[body.name].password) {
       throw new createError(400, "Invalid request body", {
@@ -45,21 +46,17 @@ const login = async (event) => {
     }
   }
 
-  // create token
-  const token = jwt.sign(
-    {
-      name: body.name,
-      role: users[body.name].role,
-    },
-    process.env.JWT_SECRET,
-    { expiresIn: "1h" }
+  // create session cookie
+  const cookie = createSessionCookie(
+    body.name,
+    users[body.name].role,
+    body.stayLoggedIn ?? false
   );
 
-  // add token as cookie
   return {
     statusCode: 200,
     headers: {
-      "Set-Cookie": `access_token=${token}; HttpOnly; Secure; SameSite=Strict`,
+      "Set-Cookie": cookie,
     },
     body: JSON.stringify({
       name: body.name,

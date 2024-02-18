@@ -1,65 +1,55 @@
-"use strict";
+// @ts-check
 
+/**
+ * @typedef {Object.<string, {role: string, password?: string, color: string}>} Users
+ */
+
+/**
+ * @type {Users}
+ */
 const users = require("../users.json");
-const jwt = require("jsonwebtoken");
+
+const cookieAuth = require("./cookieAuth");
 const createError = require("http-errors");
 
-const decodeAccessToken = (event) => {
-  // get access_token from cookie
-  const cookieHeader = event.headers["Cookie"];
-  if (!cookieHeader) {
-    throw new createError.Unauthorized("Unauthorized");
-  }
-  const cookies = cookieHeader.split("; ");
-  let accessToken;
-  for (const cookie of cookies) {
-    const [name, value] = cookie.split("=");
-    if (name === "access_token") {
-      accessToken = value;
-    }
-  }
-
-  if (!accessToken) {
-    // unauthorized
-    throw new createError.Unauthorized("Unauthorized");
-  }
-
-  // verify token
+/**
+ * Authenticate user
+ * @param {import("aws-lambda").APIGatewayProxyEvent} apiEvent - HTTP request
+ * @param {Object} options - Options
+ * @param {string} [options.role] - Role to check
+ * @param {string} [options.name] - Name to check
+ * @returns {cookieAuth.JwtPayload} - User object
+ */
+const authenticate = (apiEvent, options = {}) => {
   try {
-    return jwt.verify(accessToken, process.env.JWT_SECRET);
-  } catch (err) {
-    if (err instanceof jwt.JsonWebTokenError) {
-      throw new createError.Unauthorized("Unauthorized");
+    const accessTokenParsed = cookieAuth.parseSessionCookie(apiEvent);
+    // check if user exists
+    if (!users[accessTokenParsed.name]) {
+      throw new Error("User not found");
     }
-  }
-};
 
-const authenticate = (event, options = {}) => {
-  const decoded = decodeAccessToken(event);
-  console.log("decoded", decoded);
+    // check if user has the required role
+    if (options.role && options.role !== accessTokenParsed.role) {
+      throw new Error("User has wrong role");
+    }
 
-  // check if user exists
-  if (!users[decoded.name]) {
+    // check if user has the required name (only for non-admins)
+    if (
+      !(accessTokenParsed.role == "admin") &&
+      options.name &&
+      options.name !== accessTokenParsed.name
+    ) {
+      throw new Error("User has wrong name");
+    }
+
+    return accessTokenParsed;
+  } catch (err) {
+    console.log(err);
     throw new createError.Unauthorized("Unauthorized");
   }
-
-  // check if user has the required role
-  if (options.role && options.role !== decoded.role) {
-    throw new createError.Unauthorized("Unauthorized");
-  }
-
-  // check if user has the required name (only for non-admins)
-  if (
-    !(decoded.role == "admin") &&
-    options.name &&
-    options.name !== decoded.name
-  ) {
-    throw new createError.Unauthorized("Unauthorized");
-  }
-
-  return decoded;
 };
 
 module.exports = {
   authenticate,
+  users,
 };

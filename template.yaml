@@ -26,6 +26,14 @@ Parameters:
     Type: String
     Description: The DynamoDB table name to store locks
     Default: cal_locks
+  UsersTable:
+    Type: String
+    Description: The DynamoDB table name to store users
+    Default: cal_users
+  WebauthnTable:
+    Type: String
+    Description: The DynamoDB table name to store webauthn
+    Default: cal_webauthn
 
 Resources:
   # This is a Lambda function config associated with the source code: listEvents.handler.js
@@ -157,6 +165,48 @@ Resources:
       BuildMethod: esbuild
       BuildProperties:
         External: ["@aws-sdk"]
+  webauthn:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/webauthn.handler
+      Description: Webauthn
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref WebauthnTable
+        # TODO: remove this
+        - DynamoDBCrudPolicy:
+            TableName: !Ref EventsTable
+      Environment:
+        Variables:
+          WEBAUTHN_TABLE: !Ref WebauthnTable
+          # TODO: remove this
+          EVENTS_TABLE: !Ref EventsTable
+      Events:
+        RegisterOptions:
+          Type: Api
+          Properties:
+            Path: /api/webauthn/register
+            Method: GET
+        RegisterVerify:
+          Type: Api
+          Properties:
+            Path: /api/webauthn/register
+            Method: POST
+        AuthenticateOptions:
+          Type: Api
+          Properties:
+            Path: /api/webauthn/authenticate
+            Method: GET
+        AuthenticateVerify:
+          Type: Api
+          Properties:
+            Path: /api/webauthn/authenticate
+            Method: POST
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        External: ["@aws-sdk"]
+
   # This is a Lambda function config associated with the source code: login.handler.js
   login:
     Type: AWS::Serverless::Function
