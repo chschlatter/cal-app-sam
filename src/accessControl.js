@@ -1,7 +1,7 @@
 // @ts-check
 
 /**
- * @typedef {Object.<string, {role: string, password?: string, color: string}>} Users
+ * @typedef {Object.<string, {role: string, googleId?: string, color: string}>} Users
  */
 
 /**

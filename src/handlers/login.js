@@ -1,15 +1,39 @@
-"use strict";
+// @ts-check
 
 const createError = require("http-errors");
 const handlerHelper = require("../handlerHelper");
-const users = require("../../users.json");
-const createHmac = require("crypto").createHmac;
+const { users } = require("../accessControl");
 const { createSessionCookie } = require("../cookieAuth");
 const { getSecret } = require("../secrets");
 const i18n = require("../i18n");
 
-const login = async (event) => {
-  if (event.httpMethod !== "POST") {
+const { OAuth2Client } = require("google-auth-library");
+const authClient = new OAuth2Client();
+
+/**
+ * body schema for the POST request
+ * @type {import("../handlerHelper").BodySchema}
+ */
+const bodySchema = {
+  name: { type: "string", required: true },
+  stayLoggedIn: { type: "boolean", required: false },
+  googleAuthJWT: { type: "string", required: false },
+};
+
+/**
+ * @typedef {Object} httpBody
+ * @property {string} name
+ * @property {boolean} [stayLoggedIn]
+ * @property {string} [googleAuthJWT]
+ */
+
+/**
+ * AWS Lambda function handler to login a user and create a session cookie
+ * @param {handlerHelper.ApiEventParsed} apiEvent - HTTP request with body parsed
+ * @returns {Promise<import("aws-lambda").APIGatewayProxyResult>} - AWS Lambda HTTP response
+ */
+const login = async (apiEvent) => {
+  if (apiEvent.httpMethod !== "POST") {
     throw new createError.BadRequest(
       i18n.t("error.wrongMethod", {
         handler: "login.handler",
@@ -19,38 +43,35 @@ const login = async (event) => {
   }
 
   // parse body
-  let body;
-  try {
-    body = JSON.parse(event.body);
-  } catch (err) {
-    throw new createError.BadRequest(i18n.t("error.invalidRequestBody"));
-  }
-
-  // check if body contains name
-  if (!body.name) {
-    throw new createError.BadRequest(i18n.t("error.login.missingName"));
-  }
+  /** @type {httpBody} */
+  const body = apiEvent.bodyParsed;
 
   // check if user exists
   if (!users[body.name]) {
-    throw new createError(400, i18n.t("error.invalidRequestBody"), {
-      code: "auth-011",
-    });
+    throw new createError.NotFound(i18n.t("error.userNotFound"));
   }
 
-  // check password if admin
+  // check google auth if admin
   if (users[body.name].role == "admin") {
-    if (!body.password) {
-      throw new createError(400, i18n.t("error.invalidRequestBody"), {
-        code: "auth-012",
-      });
-    }
-    const hash = createHmac("sha256", getSecret("PW_HMAC_KEY"));
-    hash.update(body.password);
-    if (hash.digest("hex") !== users[body.name].password) {
-      throw new createError(400, i18n.t("error.invalidRequestBody"), {
-        code: "auth-010",
-      });
+    if (body.googleAuthJWT) {
+      try {
+        const ticket = await authClient.verifyIdToken({
+          idToken: body.googleAuthJWT,
+          audience: getSecret("GOOGLE_CLIENT_ID"),
+        });
+        const payload = ticket.getPayload();
+        if (payload !== undefined) {
+          if (payload.sub !== users[body.name].googleId) {
+            throw new createError.Unauthorized(i18n.t("error.unauthorized"));
+          }
+        }
+      } catch (error) {
+        throw createError(400, i18n.t("error.invalidRequestBody"), {
+          code: "auth-014",
+        });
+      }
+    } else {
+      throw new createError.NotAcceptable(i18n.t("error.missingGoogleAuth"));
     }
   }
 
@@ -74,4 +95,6 @@ const login = async (event) => {
   };
 };
 
-exports.handler = handlerHelper.apiHandler(login);
+exports.handler = handlerHelper.apiHandler(login, {
+  bodySchema: bodySchema,
+});

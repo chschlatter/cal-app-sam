@@ -47,19 +47,24 @@ exports.apiHandler = (handler, options = {}) => {
       if (options.bodySchema) {
         const body = JSON.parse(event.body);
         Object.entries(options.bodySchema).forEach(([key, value]) => {
-          if (value.required && !body[key]) {
-            throw new createError.BadRequest(`Missing required field: ${key}`);
-          }
-          if (value.type === "ISOdate") {
-            if (isNaN(Date.parse(body[key]))) {
+          if (body[key] === undefined) {
+            if (value.required) {
               throw new createError.BadRequest(
-                `Invalid date for field ${key}: ${body[key]}`
+                `Missing required field: ${key}`
               );
             }
-          } else if (typeof body[key] !== value.type) {
-            throw new createError.BadRequest(
-              `Invalid type for field ${key}: ${typeof body[key]}`
-            );
+          } else {
+            if (value.type === "ISOdate") {
+              if (isNaN(Date.parse(body[key]))) {
+                throw new createError.BadRequest(
+                  `Invalid date for field ${key}: ${body[key]}`
+                );
+              }
+            } else if (typeof body[key] !== value.type) {
+              throw new createError.BadRequest(
+                `Invalid type for field ${key}: ${typeof body[key]}`
+              );
+            }
           }
         });
         event.bodyParsed = body;

@@ -10,7 +10,6 @@ const { getSecret } = require("./secrets");
  * @extends {jwt.JwtPayload}
  * @property {string} name
  * @property {string} role
- * @property {string} [challenge]
  */
 
 /**
@@ -24,7 +23,6 @@ exports.createSessionCookie = (userName, userRole, stayLoggedIn = false) => {
   const tokenExpiresIn = stayLoggedIn ? "300d" : "1h";
   const maxAge = stayLoggedIn ? 300 * 24 * 3600 : 0;
 
-  // include challenge if provided
   /**
    * @type {JwtPayload}
    */
@@ -32,7 +30,6 @@ exports.createSessionCookie = (userName, userRole, stayLoggedIn = false) => {
     name: userName,
     role: userRole,
   };
-  userRole == "admin" && (payload.challenge = uuid.v4());
 
   const accessToken = jwt.sign(payload, getSecret("JWT_SECRET"), {
     expiresIn: tokenExpiresIn,
