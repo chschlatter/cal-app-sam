@@ -2,6 +2,7 @@
 
 const handlerHelper = require("../handlerHelper");
 const access = require("../accessControl");
+const { UsersModel: Users } = require("../model/users.model");
 
 /**
  * AWS Lambda function handler to list users from a JSON file
@@ -11,7 +12,8 @@ const access = require("../accessControl");
 const listUsers = async (apiEvent) => {
   access.authenticate(apiEvent, { role: "admin" });
 
-  const body = Object.entries(access.users).map(([name, user]) => {
+  const users = new Users().getUsers();
+  const body = Object.entries(users).map(([name, user]) => {
     return {
       name: name,
       role: user.role,

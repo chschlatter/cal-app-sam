@@ -1,3 +1,5 @@
 node_modules
 .aws-sam
+front/dist/*.js
+front/dist/*.txt
 

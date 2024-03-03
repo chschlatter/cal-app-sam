@@ -31,6 +31,11 @@ const maxDays = 100;
  * @property {string} [color]
  */
 
+/**
+ * @class EventsError
+ * @classdesc Custom error class for events
+ * @extends {Error}
+ */
 export class EventsError extends Error {
   /**
    * @param {string} message

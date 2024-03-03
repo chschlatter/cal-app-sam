@@ -56,7 +56,7 @@ const dynamoLock = async (dynamodbDocumentClient, resource) => {
 
 const dynamoUnlock = async (dynamodbDocumentClient, resource) => {
   const params = {
-    TableName: "cal_locks",
+    TableName: locksTable,
     Key: {
       resource: resource,
     },

@@ -4,6 +4,7 @@ const createError = require("http-errors");
 const handlerHelper = require("../handlerHelper");
 const access = require("../accessControl");
 const { EventsModel } = require("../model/events2.model");
+const { UsersModel: Users } = require("../model/users.model");
 const i18n = require("../i18n");
 
 /**
@@ -36,7 +37,7 @@ const createEvent = async (apiEvent) => {
 
   const events = new EventsModel();
   const event = await events.create(apiEvent.bodyParsed);
-  event.color = access.users[event.title].color;
+  event.color = new Users().getUserColor(event.title);
 
   return {
     statusCode: 200,

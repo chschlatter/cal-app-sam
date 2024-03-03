@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Calendar Login</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link href="colors.css" rel="stylesheet" />
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-10 offset-lg-1 mt-5">
+          <!-- <h3 class="mb-3 mt-5">Login</h3> -->
+          <div class="bg-white shadow rounded">
+            <div class="row">
+              <!-- style="min-height: 400px;" -->
+
+              <div class="col-md-7 pe-0">
+                <div class="h-100 py-5 px-5">
+                  <form class="row g-4" x-data="calLogin(App.apiUrl);">
+                    <div class="col-12">
+                      <label>Benutzername</label>
+                      <div class="input-group">
+                        <div class="input-group-text">
+                          <i class="bi bi-person-fill"></i>
+                        </div>
+                        <input
+                          type="text"
+                          autocomplete="username"
+                          id="username-input"
+                          class="form-control"
+                          placeholder="Enter username"
+                          aria-describedby="username-feedback"
+                          name="name"
+                          :class="{ 'is-invalid': $store.username.invalid }"
+                          x-model="$store.username.value"
+                          @input="$store.username.invalid = false"
+                          @keyup.enter="login"
+                        />
+                        <div
+                          class="invalid-feedback"
+                          x-text="$store.username.errorMessage"
+                        ></div>
+                      </div>
+                    </div>
+                    <div class="col-12">
+                      <input
+                        class="form-check-input"
+                        type="checkbox"
+                        id="stayLoggedIn"
+                        name="stayLoggedIn"
+                        value=""
+                        x-model="stayLoggedIn"
+                        x-bind:disabled="gisNeeded"
+                      />
+                      <label class="form-check-label" for="stayLoggedIn"
+                        >Angemeldet bleiben</label
+                      >
+                    </div>
+
+                    <div class="col-12" x-show="gisNeeded">
+                      <div
+                        class="g_id_signin"
+                        data-type="standard"
+                        data-shape="rectangular"
+                        data-theme="outline"
+                        data-text="signin_with"
+                        data-size="large"
+                        data-locale="de"
+                        data-logo_alignment="left"
+                      ></div>
+                    </div>
+
+                    <div class="col-12">
+                      <button
+                        type="button"
+                        class="btn btn-primary px-4 float-end mt-4"
+                        @click="login"
+                      >
+                        Login
+                      </button>
+                      <div class="text-danger" x-text="errorMessage"></div>
+                    </div>
+                  </form>
+                </div>
+              </div>
+
+              <div class="col-md-5 ps-0 d-none d-md-block">
+                <div class="h-100 bg-primary text-white text-center pt-5">
+                  <h2 class="fs-1 px-1">Zürcherhaus Kalender</h2>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div
+      id="g_id_onload"
+      data-client_id="526294920927-4mbsla2r4dkrk1t3if5976ss1pnvro2t.apps.googleusercontent.com"
+      data-context="signin"
+      data-ux_mode="popup"
+      data-callback="gsiCallback"
+      data-auto_prompt="false"
+    ></div>
+
+    <script src="https://accounts.google.com/gsi/client" defer></script>
+    <script src="login.bundle.js">
+      defer
+    </script>
+  </body>
+</html>

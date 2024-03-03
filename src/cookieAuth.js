@@ -58,7 +58,10 @@ exports.parseSessionCookie = (apiEvent) => {
     apiEvent.headers["Cookie"] ?? ""
   );
   const parsedToken = jwt.verify(accessToken, getSecret("JWT_SECRET"));
-  console.log("parsed cookie: ", parsedToken);
-  // @ts-ignore
-  return parsedToken;
+  if (typeof parsedToken === "object") {
+    console.log("parsed cookie: ", parsedToken);
+    return parsedToken;
+  } else {
+    throw new Error("Invalid token");
+  }
 };

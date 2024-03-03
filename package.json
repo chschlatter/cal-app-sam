@@ -11,11 +11,28 @@
     "http-errors": "^2.0.0",
     "jsonwebtoken": "^9.0.2",
     "node-polyglot": "^2.5.0",
-    "uuid": "^9.0.1"
+    "uuid": "^9.0.1",
+    "@fullcalendar/bootstrap5": "^6.1.10",
+    "@fullcalendar/core": "^6.1.10",
+    "@fullcalendar/daygrid": "^6.1.10",
+    "@fullcalendar/interaction": "^6.1.10",
+    "alpinejs": "^3.13.3",
+    "bootstrap": "^5.3.2"
   },
-  "scripts": {},
+  "scripts": {
+    "build": "sam build",
+    "deploy": "sam deploy",
+    "build-prod": "sam build --config-env prod",
+    "deploy-prod": "sam deploy --config-env prod",
+    "front-build-prod": "webpack --mode production",
+    "front-build": "webpack --mode development",
+    "front-deploy-prod": "aws s3 sync ./front/dist/ s3://cal-app-sam-frontend --delete",
+    "front-deploy": "aws s3 sync ./front/dist/ s3://cal-app-sam-dev-frontend --delete"
+  },
   "devDependencies": {
     "@aws-sdk/lib-dynamodb": "^3.511.0",
-    "@types/aws-lambda": "^8.10.133"
+    "@types/aws-lambda": "^8.10.133",
+    "webpack": "^5.89.0",
+    "webpack-cli": "^5.1.4"
   }
 }

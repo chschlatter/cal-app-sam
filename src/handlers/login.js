@@ -2,7 +2,8 @@
 
 const createError = require("http-errors");
 const handlerHelper = require("../handlerHelper");
-const { users } = require("../accessControl");
+const access = require("../accessControl");
+const { UsersModel: Users } = require("../model/users.model");
 const { createSessionCookie } = require("../cookieAuth");
 const { getSecret } = require("../secrets");
 const i18n = require("../i18n");
@@ -42,17 +43,16 @@ const login = async (apiEvent) => {
     );
   }
 
-  // parse body
-  /** @type {httpBody} */
-  const body = apiEvent.bodyParsed;
+  /** @type {httpBody} */ const body = apiEvent.bodyParsed;
+  const user = new Users().getUser(body.name);
 
   // check if user exists
-  if (!users[body.name]) {
+  if (!user) {
     throw new createError.NotFound(i18n.t("error.userNotFound"));
   }
 
   // check google auth if admin
-  if (users[body.name].role == "admin") {
+  if (user.role !== "admin") {
     if (body.googleAuthJWT) {
       try {
         const ticket = await authClient.verifyIdToken({
@@ -61,7 +61,7 @@ const login = async (apiEvent) => {
         });
         const payload = ticket.getPayload();
         if (payload !== undefined) {
-          if (payload.sub !== users[body.name].googleId) {
+          if (payload.sub !== user.googleId) {
             throw new createError.Unauthorized(i18n.t("error.unauthorized"));
           }
         }
@@ -78,7 +78,7 @@ const login = async (apiEvent) => {
   // create session cookie
   const cookie = createSessionCookie(
     body.name,
-    users[body.name].role,
+    user.role,
     body.stayLoggedIn ?? false
   );
 
@@ -89,8 +89,8 @@ const login = async (apiEvent) => {
     },
     body: JSON.stringify({
       name: body.name,
-      role: users[body.name].role,
-      color: users[body.name].color,
+      role: user.role,
+      color: user.color,
     }),
   };
 };

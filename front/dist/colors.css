@@ -1,0 +1,25 @@
+/*
+ * use https://www.learnui.design/tools/data-color-picker.html#single
+ * to generate color palette
+ */
+
+:root {
+  --bs-body-bg: #ffffff;
+  --bs-primary: #7397c3;
+  --bs-primary-rgb: 115, 151, 195;
+}
+
+.btn-primary {
+  --bs-btn-bg: var(--bs-primary);
+  --bs-btn-border-color: var(--bs-primary);
+  --bs-btn-hover-bg: #415f8a;
+  --bs-btn-active-bg: #415f8a;
+  --bs-btn-active-border-color: #415f8a;
+  --bs-btn-disabled-bg: #a9d3ff;
+  --bs-btn-disabled-color: #415f8a;
+  --bs-btn-disabled-border-color: #a9d3ff;
+}
+
+.fc {
+  --fc-today-bg-color: #f1edba;
+}

@@ -1,16 +1,7 @@
 // @ts-check
 
-/**
- * @typedef {Object.<string, {role: string, googleId?: string, color: string}>} Users
- */
-
-/**
- * @type {Users}
- */
-const users = require("../users.json");
-
+const { UsersModel: Users } = require("./model/users.model");
 const cookieAuth = require("./cookieAuth");
-const createError = require("http-errors");
 
 /**
  * @class AccessError
@@ -38,9 +29,10 @@ class AccessError extends Error {
  */
 const authenticate = (apiEvent, options = {}) => {
   try {
+    const users = new Users();
     const accessTokenParsed = cookieAuth.parseSessionCookie(apiEvent);
     // check if user exists
-    if (!users[accessTokenParsed.name]) {
+    if (!users.getUser(accessTokenParsed.name)) {
       throw new Error("User not found");
     }
 
@@ -67,6 +59,5 @@ const authenticate = (apiEvent, options = {}) => {
 
 module.exports = {
   authenticate,
-  users,
   AccessError,
 };

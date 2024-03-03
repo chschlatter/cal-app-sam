@@ -4,7 +4,7 @@ version = 0.1
 
 [default]
 [default.global.parameters]
-stack_name = "cal-app-sam"
+stack_name = "cal-app-sam-dev"
 
 [default.build.parameters]
 cached = true
@@ -17,9 +17,8 @@ lint = true
 capabilities = "CAPABILITY_IAM"
 confirm_changeset = true
 resolve_s3 = true
-s3_prefix = "cal-app-sam"
+s3_prefix = "cal-app-sam-dev"
 region = "eu-central-2"
-parameter_overrides = "EventsTable=\"cal_events\" UsersTable=\"cal_users\" LocksTable=\"cal_locks\""
 image_repositories = []
 
 [default.package.parameters]
@@ -28,8 +27,34 @@ resolve_s3 = true
 [default.sync.parameters]
 watch = true
 
-[default.local_start_api.parameters]
-warm_containers = "EAGER"
+[prod]
+[prod.global.parameters]
+stack_name = "cal-app-sam"
+parameter_overrides = """
+  EnvType="prod"
+  EventsTable="cal_events"
+  LocksTable="cal_locks"
+  CFDistCNAME="kalender.schlatter.net"
+  CFDistViewerCertificate="arn:aws:acm:us-east-1:374093763622:certificate/d004c3e1-db58-45a7-8f25-6d918c6c4c8d"
+"""
 
-[default.local_start_lambda.parameters]
-warm_containers = "EAGER"
+[prod.build.parameters]
+cached = true
+parallel = true
+
+[prod.validate.parameters]
+lint = true
+
+[prod.deploy.parameters]
+capabilities = "CAPABILITY_IAM"
+confirm_changeset = true
+resolve_s3 = true
+s3_prefix = "cal-app-sam"
+region = "eu-central-2"
+image_repositories = []
+
+[prod.package.parameters]
+resolve_s3 = true
+
+[prod.sync.parameters]
+watch = true

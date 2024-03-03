@@ -14,28 +14,89 @@ Globals:
       - x86_64
     Environment:
       Variables:
-        JWT_SECRET: "{{resolve:ssm:/cal-app-sam/JWT_SECRET}}"
+        JWT_SECRET: !Sub "{{resolve:ssm:/${AWS::StackName}/JWT_SECRET}}"
 
 Parameters:
-  # This is a DynamoDB table config
+  EnvType:
+    Description: Environment type.
+    Default: test
+    Type: String
+    AllowedValues:
+      - prod
+      - test
+    ConstraintDescription: must specify prod or test.
   EventsTable:
     Type: String
     Description: The DynamoDB table name to store events
-    Default: cal_events
+    Default: cal_events_dev
   LocksTable:
     Type: String
     Description: The DynamoDB table name to store locks
-    Default: cal_locks
-  UsersTable:
+    Default: cal_locks_dev
+  CFDistCNAME:
     Type: String
-    Description: The DynamoDB table name to store users
-    Default: cal_users
-  WebauthnTable:
+    Description: The CloudFront distribution CNAME
+    Default: kalender-dev.schlatter.net
+  CFDistViewerCertificate:
     Type: String
-    Description: The DynamoDB table name to store webauthn
-    Default: cal_webauthn
+    Description: The CloudFront distribution viewer certificate
+    Default: "arn:aws:acm:us-east-1:374093763622:certificate/1d31fe2a-19bf-4e16-b043-4b6ef02b31e6"
+
+Conditions:
+  CreateTestResources: !Equals
+    - !Ref EnvType
+    - test
 
 Resources:
+  # DynamoDB table to store lock records
+  DbLocksTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    Properties:
+      TableName: !Ref LocksTable
+      AttributeDefinitions:
+        - AttributeName: resource
+          AttributeType: S
+      KeySchema:
+        - AttributeName: resource
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+
+  # DynamoDB table to store event records (global secondary index for date range queries)
+  DbEventsTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    Properties:
+      TableName: !Ref EventsTable
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: type
+          AttributeType: S
+        - AttributeName: end
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: type-end-index
+          KeySchema:
+            - AttributeName: type
+              KeyType: HASH
+            - AttributeName: end
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+          # Indexes need their own provisioned throughput (!)
+          ProvisionedThroughput:
+            ReadCapacityUnits: 5
+            WriteCapacityUnits: 5
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+
   # This is a Lambda function config associated with the source code: listEvents.handler.js
   listEvents:
     Type: AWS::Serverless::Function
@@ -202,8 +263,153 @@ Resources:
       BuildMethod: esbuild
       BuildProperties:
         External: ["@aws-sdk"]
+  # Lambda function for test purposes
+  test:
+    Type: AWS::Serverless::Function
+    Condition: CreateTestResources
+    Properties:
+      Handler: src/handlers/test.handler
+      Description: Test function
+      Events:
+        AuthToken:
+          Type: Api
+          Properties:
+            Path: /api/test/auth
+            Method: GET
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        External: ["@aws-sdk"]
+
+  # S3 bucket to store the web application (Dev)
+  # with a policy to allow access from cloudfront (no public access)
+  WebAppS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${AWS::StackName}-frontend"
+      AccessControl: Private
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: index.html
+
+  WebAppS3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref WebAppS3Bucket
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub "arn:aws:s3:::${WebAppS3Bucket}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${WebAppCloudFrontDistribution}"
+
+  # CloudFront function to rewrite login path
+  RewriteLoginFunction:
+    Type: AWS::CloudFront::Function
+    Properties:
+      AutoPublish: true
+      Name: !Sub "${AWS::StackName}-RewriteLoginFunction"
+      FunctionConfig:
+        Comment: "Rewrite login path"
+        Runtime: cloudfront-js-2.0
+      FunctionCode: |
+        function handler(event) {
+          const request = event.request;
+          const uri = request.uri;
+          if (uri === "/login") {
+            request.uri = '/login.html';
+          }
+          return request;
+        }
+
+  # CloudFront access control for s3 bucket
+  WebAppS3BucketOAC:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub "OAC/${WebAppS3Bucket}"
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  # CloudFront distribution to serve the web application (Dev)
+  WebAppCloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Origins:
+          - DomainName: !GetAtt WebAppS3Bucket.RegionalDomainName
+            Id: S3Origin
+            S3OriginConfig:
+              OriginAccessIdentity: ""
+            OriginAccessControlId: !GetAtt WebAppS3BucketOAC.Id
+          # API Gateway endpoint
+          - DomainName: !Sub "${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com"
+            Id: ApiGatewayOrigin
+            OriginPath: "/Prod"
+            CustomOriginConfig:
+              HTTPPort: 80
+              HTTPSPort: 443
+              OriginProtocolPolicy: https-only
+        Enabled: true
+        Aliases:
+          - !Ref CFDistCNAME
+        ViewerCertificate:
+          AcmCertificateArn: !Ref CFDistViewerCertificate
+          SslSupportMethod: sni-only
+          MinimumProtocolVersion: TLSv1.2_2019
+        DefaultRootObject: index.html
+        DefaultCacheBehavior:
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          TargetOriginId: S3Origin
+          ForwardedValues:
+            QueryString: false
+          ViewerProtocolPolicy: redirect-to-https
+          # managed cache policy CachingDisabled
+          CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+          FunctionAssociations:
+            - EventType: viewer-request
+              FunctionARN: !GetAtt RewriteLoginFunction.FunctionMetadata.FunctionARN
+        CacheBehaviors:
+          - PathPattern: /api/*
+            # [HEAD, DELETE, POST, GET, OPTIONS, PUT, PATCH]
+            AllowedMethods:
+              - HEAD
+              - DELETE
+              - POST
+              - GET
+              - OPTIONS
+              - PUT
+              - PATCH
+            TargetOriginId: ApiGatewayOrigin
+            ForwardedValues:
+              QueryString: true
+            ViewerProtocolPolicy: redirect-to-https
+            # managed cache policy CachingDisabled
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            # managed origin request policy AllViewerExceptHostHeader
+            # see https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/using-managed-origin-request-policies.html#managed-origin-request-policy-all-viewer-except-host-header
+            OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
+        PriceClass: PriceClass_100
+        CustomErrorResponses:
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /index.html
 
 Outputs:
   WebEndpoint:
     Description: "API Gateway endpoint URL for Prod stage"
     Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+  WebAppS3Bucket:
+    Description: "S3 bucket for the web application"
+    Value: !Ref WebAppS3Bucket
+  WebAppCloudFrontDistribution:
+    Description: "CloudFront distribution for the web application"
+    Value: !Ref WebAppCloudFrontDistribution
