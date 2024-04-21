@@ -4,6 +4,12 @@
   "version": "0.0.1",
   "private": true,
   "dependencies": {
+    "@fullcalendar/bootstrap5": "^6.1.10",
+    "@fullcalendar/core": "^6.1.10",
+    "@fullcalendar/daygrid": "^6.1.10",
+    "@fullcalendar/interaction": "^6.1.10",
+    "alpinejs": "^3.13.3",
+    "bootstrap": "^5.3.2",
     "cookie": "^0.6.0",
     "dayjs": "^1.11.10",
     "esbuild": "^0.19.8",
@@ -11,13 +17,7 @@
     "http-errors": "^2.0.0",
     "jsonwebtoken": "^9.0.2",
     "node-polyglot": "^2.5.0",
-    "uuid": "^9.0.1",
-    "@fullcalendar/bootstrap5": "^6.1.10",
-    "@fullcalendar/core": "^6.1.10",
-    "@fullcalendar/daygrid": "^6.1.10",
-    "@fullcalendar/interaction": "^6.1.10",
-    "alpinejs": "^3.13.3",
-    "bootstrap": "^5.3.2"
+    "uuid": "^9.0.1"
   },
   "scripts": {
     "build": "sam build",
@@ -32,6 +32,7 @@
   "devDependencies": {
     "@aws-sdk/lib-dynamodb": "^3.511.0",
     "@types/aws-lambda": "^8.10.133",
+    "dotenv": "^16.4.5",
     "webpack": "^5.89.0",
     "webpack-cli": "^5.1.4"
   }

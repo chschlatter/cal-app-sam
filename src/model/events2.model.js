@@ -14,6 +14,7 @@ const users = require("../../users.json");
 const { dynamoLock2 } = require("../dynamo-lock");
 const { initDB } = require("../db2");
 const i18n = require("../i18n");
+const { getEnv } = require("../secrets");
 
 const maxDays = 100;
 
@@ -39,7 +40,7 @@ const maxDays = 100;
 export class EventsError extends Error {
   /**
    * @param {string} message
-   * @param {"start_end_required"|"event_not_found"|"event_overlaps"|"event_max_days"} errorCode
+   * @param {"start_end_required"|"event_not_found"|"event_overlaps"|"event_max_days"|"event_validation"} errorCode
    * @param {Object} [data]
    * @param {boolean} [data.overlap_start]
    * @param {boolean} [data.overlap_end]
@@ -64,7 +65,7 @@ export class EventsModel {
   #db;
 
   constructor() {
-    this.#db = initDB(process.env.EVENTS_TABLE ?? "");
+    this.#db = initDB(getEnv("EVENTS_TABLE"));
   }
 
   /**
@@ -106,7 +107,7 @@ export class EventsModel {
    * @throws {Error} - If DynamoDB operation fails
    */
   async create(event) {
-    this.#checkMaxDays(event);
+    this.#validateEvent(event);
 
     // lock cal_events table
     const unlock = await dynamoLock2(this.#db);
@@ -127,6 +128,30 @@ export class EventsModel {
   }
 
   /**
+   * Create multiple events
+   * @param {Event[]} events - events to create
+   * @returns {Promise<Event[]>} - created events
+   * @throws {EventException} - If event duration is greater than maxDays
+   * @throws {Error} - If DynamoDB operation fails
+   */
+  async batchCreate(events) {
+    const unlock = await dynamoLock2(this.#db);
+    try {
+      for (const event of events) {
+        this.#validateEvent(event);
+        await this.#checkOverlaps(event);
+        event.id = uuidv4();
+        event.type = "event";
+        const dbCmd = this.#getDbCommand("create", event);
+        await (await this.#db.client).send(dbCmd);
+      }
+    } finally {
+      await unlock();
+    }
+    return events;
+  }
+
+  /**
    * Update an event
    * @param {Event} event - event to update
    * @returns {Promise<Event>} - updated event
@@ -134,7 +159,7 @@ export class EventsModel {
    * @throws {Error} - If DynamoDB operation fails
    */
   async update(event) {
-    this.#checkMaxDays(event);
+    this.#validateEvent(event);
     const dbCmd = this.#getDbCommand("update", event);
 
     // lock cal_events table
@@ -206,6 +231,20 @@ export class EventsModel {
   }
 
   /**
+   * Delete events within the specified year.
+   * @param {string} year - The year to delete events for.
+   * @returns {Promise<void>} - A promise that resolves when the events are deleted.
+   */
+  async deleteEventsByYear(year) {
+    const start = dayjs(year + "-01-01").toISOString();
+    const end = dayjs(year + "-12-31").toISOString();
+    const events = await this.list(start, end);
+    for (const event of events) {
+      await this.remove(event.id);
+    }
+  }
+
+  /**
    * Check if event overlaps with another
    * @param {Event} event - event to check
    * @returns {Promise<void>}
@@ -246,14 +285,21 @@ export class EventsModel {
   }
 
   /**
-   * Check if event duration is within maxDays
-   * @param {Event} event - event to check
-   * @throws {createError.BadRequest} - If event duration is greater than maxDays
+   * Validate event data
+   * @param {Event} event - event data
+   * @throws {EventsError} - If event data is invalid
    * @returns {void}
    */
-  #checkMaxDays(event) {
+  #validateEvent(event) {
+    if (!event.title || !event.start || !event.end) {
+      throw new EventsError("Missing required fields", "event_validation");
+    }
     const startDate = new Date(event.start).getTime();
     const endDate = new Date(event.end).getTime();
+
+    if (startDate > endDate) {
+      throw new EventsError("Start date is after end date", "event_validation");
+    }
 
     if ((endDate - startDate) / (1000 * 60 * 60 * 24) > maxDays) {
       throw new EventsError(

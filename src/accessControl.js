@@ -41,6 +41,11 @@ const authenticate = (apiEvent, options = {}) => {
       throw new Error("User has wrong role");
     }
 
+    // if options.name provided, check if user with that name exists
+    if (options.name && !users.getUser(options.name)) {
+      throw new Error("User not found");
+    }
+
     // check if user has the required name (only for non-admins)
     if (
       !(accessTokenParsed.role == "admin") &&

@@ -6,6 +6,7 @@ const { UsersModel: Users } = require("../model/users.model");
 const jwt = require("jsonwebtoken");
 const { getSecret } = require("../secrets");
 const { createSessionCookie } = require("../cookieAuth");
+const { EventsModel } = require("../model/events2.model");
 
 /**
  * body schema for the POST request
@@ -30,15 +31,24 @@ const bodySchema = {
  * @param {handlerHelper.ApiEventParsed} apiEvent - HTTP request with body parsed
  * @returns {Promise<import("aws-lambda").APIGatewayProxyResult>} - AWS Lambda HTTP response
  */
-const authHandler = async (apiEvent) => {
+const testHandler = async (apiEvent) => {
   switch (apiEvent.httpMethod) {
     case "GET":
-      return await getAuthToken(apiEvent);
+      return getAuthToken(apiEvent);
+    case "POST":
+      return batchCreateEvents(apiEvent);
+    case "DELETE":
+      return deleteEvents(apiEvent);
     default:
       throw new createError.BadRequest("Invalid HTTP method. Use GET");
   }
 };
 
+/**
+ * Get auth token
+ * @param {handlerHelper.ApiEventParsed} apiEvent - HTTP request with body parsed
+ * @returns {Promise<import("aws-lambda").APIGatewayProxyResult>} - AWS Lambda HTTP response
+ */
 const getAuthToken = async (apiEvent) => {
   // parse query string: ?jwt=...
   const usernameToken = apiEvent.queryStringParameters?.jwt;
@@ -67,8 +77,40 @@ const getAuthToken = async (apiEvent) => {
   }
 };
 
-/*
-exports.handler = handlerHelper.apiHandler(createEvent, {
-  bodySchema: bodySchema,
-});
-*/
+/**
+ * Create events in batch
+ * @param {handlerHelper.ApiEventParsed} apiEvent - HTTP request with body parsed
+ * @returns {Promise<import("aws-lambda").APIGatewayProxyResult>} - AWS Lambda HTTP response
+ */
+const batchCreateEvents = async (apiEvent) => {
+  const events = new EventsModel();
+  const eventsData = JSON.parse(apiEvent.body);
+  const createdEvents = await events.batchCreate(eventsData);
+
+  return {
+    statusCode: 200,
+    body: JSON.stringify(createdEvents),
+  };
+};
+
+/**
+ * Delete events, by year as provided in path /events/{year}
+ * @param {handlerHelper.ApiEventParsed} apiEvent - HTTP request with body parsed
+ * @returns {Promise<import("aws-lambda").APIGatewayProxyResult>} - AWS Lambda HTTP response
+ */
+const deleteEvents = async (apiEvent) => {
+  const year = apiEvent.pathParameters?.year;
+  if (!year) {
+    throw new createError.BadRequest("Missing year in path");
+  }
+  // delete events
+  const events = new EventsModel();
+  await events.deleteEventsByYear(year);
+
+  return {
+    statusCode: 200,
+    body: JSON.stringify({ message: `Deleted events for year ${year}` }),
+  };
+};
+
+exports.handler = handlerHelper.apiHandler(testHandler);

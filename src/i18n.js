@@ -14,6 +14,7 @@ const phrases = {
     "error.eventNotFound": "Event not found.",
     "error.eventOverlaps": "Event overlaps with existing event.",
     "error.eventMaxDays": "Event exceeds maximum of %{maxDays} days.",
+    "error.eventValidation": "Event validation error.",
     "error.unauthorized": "Unauthorized.",
     "error.userNotFound": "User not found.",
     "error.missingGoogleAuth": "Missing Google authentication.",
@@ -32,6 +33,7 @@ const phrases = {
       "Reservation überschneidet sich mit bestehender Reservation.",
     "error.eventMaxDays":
       "Reservation überschreitet das Maximum von %{maxDays} Tagen.",
+    "error.eventValidation": "Fehler bei der Reservierungsvalidierung.",
     "error.unauthorized": "Unberechtigt.",
     "error.userNotFound": "Benutzer nicht gefunden.",
     "error.missingGoogleAuth": "Fehlende Google-Authentifizierung.",

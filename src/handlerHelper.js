@@ -45,7 +45,15 @@ exports.apiHandler = (handler, options = {}) => {
       }
 
       if (options.bodySchema) {
-        const body = JSON.parse(event.body);
+        if (!event.body) {
+          throw new createError.BadRequest("Missing request body");
+        }
+        let body;
+        try {
+          body = JSON.parse(event.body);
+        } catch (err) {
+          throw new createError.BadRequest("Invalid JSON in request body");
+        }
         Object.entries(options.bodySchema).forEach(([key, value]) => {
           if (body[key] === undefined) {
             if (value.required) {
@@ -67,6 +75,7 @@ exports.apiHandler = (handler, options = {}) => {
             }
           }
         });
+
         event.bodyParsed = body;
       }
 
@@ -109,6 +118,9 @@ const handleErrors = (err) => {
           i18n.t("error.eventMaxDays", { maxDays: err.data.maxDays }),
           err.data
         );
+        break;
+      case "event_validation":
+        err = createError(400, i18n.t("error.eventValidation"), err.data);
         break;
       default:
         err = new createError.InternalServerError(
