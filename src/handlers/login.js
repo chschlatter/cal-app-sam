@@ -52,7 +52,7 @@ const login = async (apiEvent) => {
   }
 
   // check google auth if admin
-  if (user.role !== "admin") {
+  if (user.role == "admin") {
     if (body.googleAuthJWT) {
       try {
         const ticket = await authClient.verifyIdToken({
