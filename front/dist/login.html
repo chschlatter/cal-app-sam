@@ -25,7 +25,11 @@
 
               <div class="col-md-7 pe-0">
                 <div class="h-100 py-5 px-5">
-                  <form class="row g-4" x-data="calLogin(App.apiUrl);">
+                  <form
+                    class="row g-4"
+                    x-data="calLogin(App.apiUrl);"
+                    onSubmit="return false;"
+                  >
                     <div class="col-12">
                       <label>Benutzername</label>
                       <div class="input-group">

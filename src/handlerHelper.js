@@ -149,6 +149,7 @@ const handleErrors = (err) => {
     };
   }
 
+  console.log(response);
   console.log(err);
   return response;
 };

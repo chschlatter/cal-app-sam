@@ -48,7 +48,9 @@ const login = async (apiEvent) => {
 
   // check if user exists
   if (!user) {
-    throw new createError.NotFound(i18n.t("error.userNotFound"));
+    throw createError(400, i18n.t("error.userNotFound"), {
+      code: "auth-001",
+    });
   }
 
   // check google auth if admin

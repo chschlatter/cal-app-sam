@@ -5,6 +5,7 @@ export default (apiUrl) => ({
   gisNeeded: false,
 
   async login() {
+    console.log("login called");
     this.isLoading = true;
     const credentials = {
       name: this.$store.username.value,
@@ -31,9 +32,13 @@ export default (apiUrl) => ({
       } else {
         switch (response.status) {
           // Not Found
-          case 404:
-            this.$store.username.errorMessage = data.message;
-            this.$store.username.invalid = true;
+          case 400:
+            if (data.code === "auth-001") {
+              this.$store.username.errorMessage = data.message;
+              this.$store.username.invalid = true;
+            } else {
+              throw new Error(data.message);
+            }
             break;
           // Not Acceptable
           case 406:
