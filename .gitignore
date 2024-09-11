@@ -1,6 +1,7 @@
 node_modules
 .aws-sam
 .env
+.vscode
 front/dist/*.js
 front/dist/*.txt
 

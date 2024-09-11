@@ -1,6 +1,7 @@
 // @ts-check
 
 require("dotenv").config();
+const { debug } = require("webpack");
 const { getSecret, getEnv } = require("./secrets");
 const jwt = require("jsonwebtoken");
 
@@ -32,13 +33,17 @@ const getApiCallFn = async () => {
     getEnv("TEST_USERNAME"),
     getSecret("TEST_JWT_SECRET")
   );
-  return async (path, options) => {
-    return await fetch(apiBaseURL + path, {
+  return async (path, options, debug = false) => {
+    const url = apiBaseURL + path;
+    const headers = {
+      ...(options?.headers || {}),
+      Cookie: token,
+    };
+    debug && console.log("API call:", url, options, headers);
+
+    return await fetch(url, {
       ...options,
-      headers: {
-        ...(options?.headers || {}),
-        Cookie: token,
-      },
+      headers,
     });
   };
 };

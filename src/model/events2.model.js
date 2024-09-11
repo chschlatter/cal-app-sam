@@ -10,7 +10,7 @@ const {
 } = require("@aws-sdk/lib-dynamodb");
 const { v4: uuidv4 } = require("uuid");
 const dayjs = require("dayjs");
-const users = require("../../users.json");
+const { UsersModel: Users } = require("../model/users.model");
 const { dynamoLock2 } = require("../dynamo-lock");
 const { initDB } = require("../db2");
 const i18n = require("../i18n");
@@ -93,7 +93,7 @@ export class EventsModel {
 
     return data.Items.map(
       /** @param {Event} item */ (item) => {
-        item.color = users[item.title] ? users[item.title].color : "blue";
+        item.color = new Users().getUserColor(item.title);
         return item;
       }
     );
@@ -118,6 +118,7 @@ export class EventsModel {
 
       event.id = uuidv4();
       event.type = "event";
+      event.color = new Users().getUserColor(event.title);
       const dbCmd = this.#getDbCommand("create", event);
       await (await this.#db.client).send(dbCmd);
     } finally {
@@ -181,6 +182,7 @@ export class EventsModel {
       // unlock cal_data table
       await unlock();
     }
+    event.color = new Users().getUserColor(event.title);
     return event;
   }
 
@@ -255,6 +257,7 @@ export class EventsModel {
     const dbCmd = this.#getDbCommand("checkOverlaps", event);
     const data = await (await this.#db.client).send(dbCmd);
 
+    console.log("checkOverlaps", data, event);
     // throw http error if event overlaps with another
     if (data.Count > 0) {
       let errorData = {
@@ -262,10 +265,8 @@ export class EventsModel {
         overlap_end: false,
       };
 
+      /* TODO: what if multiple events overlap? */
       data.Items.forEach((item) => {
-        if (item.id === event.id) {
-          return;
-        }
         if (event.start >= item.start) {
           errorData.overlap_start = true;
         }
@@ -274,13 +275,11 @@ export class EventsModel {
         }
       });
 
-      if (errorData.overlap_start || errorData.overlap_end) {
-        throw new EventsError(
-          "Event overlaps with another",
-          "event_overlaps",
-          errorData
-        );
-      }
+      throw new EventsError(
+        "Event overlaps with another",
+        "event_overlaps",
+        errorData
+      );
     }
   }
 
@@ -292,13 +291,16 @@ export class EventsModel {
    */
   #validateEvent(event) {
     if (!event.title || !event.start || !event.end) {
-      throw new EventsError("Missing required fields", "event_validation");
+      throw new EventsError(
+        "error.eventStartEndRequired",
+        "start_end_required"
+      );
     }
     const startDate = new Date(event.start).getTime();
     const endDate = new Date(event.end).getTime();
 
     if (startDate > endDate) {
-      throw new EventsError("Start date is after end date", "event_validation");
+      throw new EventsError("error.eventStartAfterEndDate", "event_validation");
     }
 
     if ((endDate - startDate) / (1000 * 60 * 60 * 24) > maxDays) {
@@ -306,6 +308,14 @@ export class EventsModel {
         "Reservations are limited to " + maxDays + " nights",
         "event_max_days",
         { maxDays: maxDays }
+      );
+    }
+
+    // check if title is valid
+    if (!new Users().isValidUser(event.title)) {
+      throw new EventsError(
+        i18n.t("error.eventInvalidTitle", { title: event.title }),
+        "event_validation"
       );
     }
   }
@@ -385,16 +395,18 @@ export class EventsModel {
           ...baseParams,
           IndexName: "type-end-index",
           KeyConditionExpression: "#type = :type AND #end > :start",
-          FilterExpression: "#start < :end",
+          FilterExpression: "#start < :end AND #id <> :id",
           ExpressionAttributeValues: {
             ":type": "event",
             ":start": dayjs(event.start).add(1, "day").format("YYYY-MM-DD"),
             ":end": dayjs(event.end).add(-1, "day").format("YYYY-MM-DD"),
+            ":id": event.id,
           },
           ExpressionAttributeNames: {
             "#type": "type",
             "#start": "start",
             "#end": "end",
+            "#id": "id",
           },
         };
         return new QueryCommand(params);

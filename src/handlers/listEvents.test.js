@@ -23,6 +23,10 @@ describe("List events - GET /api/events", () => {
     await populateDb(apiCall, eventsSample);
   });
 
+  after(async () => {
+    await clearDb(apiCall, 2025);
+  });
+
   test("List all events", async () => {
     const startDate = new Date("2025-01-01").toISOString();
     const endDate = new Date("2025-12-31").toISOString();
@@ -97,9 +101,5 @@ describe("List events - GET /api/events", () => {
 
     const response = await apiCall("/api/events" + queryParams);
     assert.equal(response.status, 400);
-  });
-
-  after(async () => {
-    await clearDb(apiCall, 2025);
   });
 });

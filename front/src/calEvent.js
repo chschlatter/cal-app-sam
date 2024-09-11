@@ -144,8 +144,8 @@ function handleApiError(error, action = "updateEvent") {
   };
 
   if (error.status == 409) {
-    result.overlap_start = error.data.overlap_start;
-    result.overlap_end = error.data.overlap_end;
+    result.overlap_start = error.data.details.overlap_start;
+    result.overlap_end = error.data.details.overlap_end;
   }
 
   // log error
@@ -166,11 +166,28 @@ async function api(url, method = "get", body) {
     fetchOptions.body = JSON.stringify(body);
   }
   const response = await fetch(url, fetchOptions);
-  const data = await response.json();
-  if (!response.ok) {
-    throw { status: response.status, data: data };
+
+  try {
+    const data = await response.json();
+    if (!data) {
+      throw new Error("Empty response");
+    }
+    if (!response.ok) {
+      throw { status: response.status, data: data };
+    }
+    return data;
+  } catch (error) {
+    if (error.name == "SyntaxError") {
+      console.error(
+        "api(): " + error.message,
+        "response:",
+        response.statusText
+      );
+      throw new Error("Failed to parse response");
+    } else {
+      throw error;
+    }
   }
-  return data;
 }
 
 // add days to date with Date object; dateStr must be in format YYYY-MM-DD

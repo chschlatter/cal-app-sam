@@ -27,6 +27,12 @@ describe("Create event - POST /api/events", () => {
     testUsername = getEnv("TEST_USERNAME");
   });
 
+  /*
+  after(async () => {
+    await clearDb(apiCall, 2026);
+  });
+  */
+
   test("Create an event", async () => {
     const event = {
       title: testUsername,
@@ -109,7 +115,7 @@ describe("Create event - POST /api/events", () => {
       method: "POST",
       body: JSON.stringify(event),
     });
-    assert.equal(response.status, 401);
+    assert.equal(response.status, 400);
   });
 
   test("Create an event with invalid duration", async () => {
@@ -168,15 +174,15 @@ describe("Create event - POST /api/events", () => {
     });
     assert.equal(response.status, 409);
     const body = await response.json();
-    assert.ok(body.overlap_start);
-    assert.ok(!body.overlap_end);
+    assert.ok(body.details.overlap_start);
+    assert.ok(!body.details.overlap_end);
   });
 
   test("Create an event that overlaps with an existing event (overlap_end)", async () => {
     const event = {
       title: testUsername,
       start: "2026-02-25",
-      end: "2026-03-13",
+      end: "2026-03-01",
     };
 
     const response = await apiCall("/api/events", {
@@ -185,8 +191,8 @@ describe("Create event - POST /api/events", () => {
     });
     assert.equal(response.status, 409);
     const body = await response.json();
-    assert.ok(!body.overlap_start);
-    assert.ok(body.overlap_end);
+    assert.ok(!body.details.overlap_start);
+    assert.ok(body.details.overlap_end);
   });
 
   test("Create an event that overlaps with an existing event (overlap_start && overlap_end)", async () => {
@@ -202,11 +208,7 @@ describe("Create event - POST /api/events", () => {
     });
     assert.equal(response.status, 409);
     const body = await response.json();
-    assert.ok(body.overlap_start);
-    assert.ok(body.overlap_end);
-  });
-
-  after(async () => {
-    await clearDb(apiCall, 2026);
+    assert.ok(body.details.overlap_start);
+    assert.ok(body.details.overlap_end);
   });
 });

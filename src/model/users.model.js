@@ -2,7 +2,7 @@
 
 /**
  * @typedef {"admin" | "user"} Role
- * @typedef {{role: Role, googleId?: string, color: string}} User
+ * @typedef {{name: string, role: Role, googleId?: string, color: string}} User
  * @typedef {Object.<string, User>} Users
  */
 
@@ -30,6 +30,7 @@ export class UsersModel {
       const validUsers = /** @type {Users} */ ({});
       for (const [name, user] of Object.entries(usersFromJSON)) {
         const validUser = /** @type {User} */ (user);
+        validUser.name = name;
         if (user.role !== "admin" && user.role !== "user") {
           throw new Error(`Invalid role for user ${name}`);
         }
@@ -85,6 +86,15 @@ export class UsersModel {
    */
   getUserColor(userName) {
     return this.#users[userName]?.color;
+  }
+
+  /**
+   * Check if user is valid
+   * @param {string} name - User name
+   * @returns {boolean} - User is valid
+   */
+  isValidUser(name) {
+    return this.#users[name] !== undefined;
   }
 }
 
