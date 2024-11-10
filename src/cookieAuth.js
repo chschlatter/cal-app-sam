@@ -35,9 +35,6 @@ exports.createSessionCookie = (userName, userRole, stayLoggedIn = false) => {
     expiresIn: tokenExpiresIn,
   });
 
-  /**
-   * @type {cookie.CookieSerializeOptions}
-   */
   const cookieOptions = {
     httpOnly: true,
     secure: true,

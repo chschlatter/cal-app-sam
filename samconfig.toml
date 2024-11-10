@@ -34,8 +34,8 @@ parameter_overrides = """
   EnvType="prod"
   EventsTable="cal_events"
   LocksTable="cal_locks"
-  CFDistCNAME="kalender.schlatter.net"
-  CFDistViewerCertificate="arn:aws:acm:us-east-1:374093763622:certificate/d004c3e1-db58-45a7-8f25-6d918c6c4c8d"
+  CFDistCNAME="adelboden.schlatter.net"
+  CFDistViewerCertificate="arn:aws:acm:us-east-1:374093763622:certificate/40ae7d6a-4579-4ed1-8317-de645fb41539"
 """
 
 [prod.build.parameters]

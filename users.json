@@ -6,18 +6,30 @@
   },
   "Nils": {
     "role": "user",
-    "color": "#88619d"
+    "color": "#c7609f"
   },
   "Helmi": {
     "role": "user",
-    "color": "#cd5e89"
+    "color": "#ffa600"
   },
   "Isabel": {
     "role": "user",
-    "color": "#ee7257"
+    "color": "#ff6b69"
   },
   "Stefan": {
     "role": "user",
-    "color": "#dba11c"
+    "color": "#9763a6"
+  },
+  "Nina": {
+    "role": "user",
+    "color": "#ee5f8a"
+  },
+  "Till": {
+    "role": "user",
+    "color": "#68649e"
+  },
+  "Ninne": {
+    "role": "user",
+    "color": "#ff8442"
   }
 }
