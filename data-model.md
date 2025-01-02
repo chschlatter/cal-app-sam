@@ -57,7 +57,7 @@ FullCalendar Event Objects: https://fullcalendar.io/docs/event-object
 
 ### FullCalendar event objects
 
-Used to get store event objects in db.
+Used to store event objects in db.
 
 - PK: 'EVENT'
 - SK: event id (UUID format)
@@ -68,7 +68,7 @@ Used to get store event objects in db.
 
 ### Event time slots (per night)
 
-Used to cocurrently check for event overlaps, without locking the db.
+Used to concurrently check for event overlaps, without locking the db.
 
 - PK: 'SLOT'
 - SK: date YYYY-MM-DD (per night, e.g. 2025-01-02 for night from Jan 2nd to Jan 3rd)
