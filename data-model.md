@@ -40,7 +40,7 @@ FullCalendar Event Objects: https://fullcalendar.io/docs/event-object
 - title
 - version: integer, incremented when item is updated
 
-- LSI event-id (event-id-index)
+LSI event-id (event-id-index)
 
 [write-tx]: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/transaction-apis.html#transaction-apis-txwriteitems
 [cond-exp]: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.ConditionExpressions.html#Expressions.ConditionExpressions.PreventingOverwrites
