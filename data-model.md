@@ -23,7 +23,7 @@ FullCalendar Event Objects: https://fullcalendar.io/docs/event-object
 - For a given event id, update an event (updateEvent)
   - get time slots for event id: event-id-index: PK = 'SLOT', event-id = event id
   - compute delta (title, start, end)
-  - create, update, delete slot items with write transaction (check item version)
+  - create, update, delete slot items with write transaction (check and update item version)
 
 ## Concurrent creation of new events
 
