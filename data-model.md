@@ -12,7 +12,11 @@ FullCalendar Event Objects: https://fullcalendar.io/docs/event-object
 ## Access Patterns
 
 - Get list of events between two dates (listEvents)
+  - date 
+  - PK = 'EVENT', SK between dates
+  - Alternative: PK = 'SLOT', SK between dates --> create event objects in application
 - When creating a new event, get overlaping events (createEvent)
+  - PK = 'SLOT', SK between dates of new event
 - Create new event only if it doesn't overlap with existing events (createEvent)
 - For a given event id, delete an event (deleteEvent)
 - For a given event id, update an event (updateEvent)
@@ -26,6 +30,10 @@ FullCalendar Event Objects: https://fullcalendar.io/docs/event-object
 
 ## Table Schema
 
+- date (PK): date YYYY-MM-DD (per night, e.g. 2025-01-02 for night from Jan 2nd to Jan 3rd)
+- event-id (SK): date YYYY-MM-DD (per night, e.g. 2025-01-02 for night from Jan 2nd to Jan 3rd)
+- title
+
 ### Events
 
 - PK: 'EVENT'
@@ -37,11 +45,12 @@ FullCalendar Event Objects: https://fullcalendar.io/docs/event-object
 
 - PK: 'SLOT'
 - SK: date YYYY-MM-DD (per night, e.g. 2025-01-02 for night from Jan 2nd to Jan 3rd)
-- event-id: event id (UUID)
+- event-id: event id (UUID, e.g. 0ad42af8-67a7-4895-8626-47335e83cf12)
+- title
 
 ### Indexes
 
-- LSI event-id
+- LSI event-id (event-id-index)
 
 [write-tx]: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/transaction-apis.html#transaction-apis-txwriteitems
 [cond-exp]: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.ConditionExpressions.html#Expressions.ConditionExpressions.PreventingOverwrites
