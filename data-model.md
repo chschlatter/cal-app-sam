@@ -13,37 +13,37 @@ FullCalendar Event Objects: https://fullcalendar.io/docs/event-object
 
 ### Get list of events within date range FROM-TO (listEvents)
 
-  - start-date-index: PK = 'EVENT', FROM < start-date < TO
+  - `start-date-index: PK = 'EVENT', FROM < start-date < TO`
 
 ### Create new event if it doesn't overlap with existing events (createEvent)
 
-  - check for overlapping events: PK = 'SLOT', SK between dates of new event
+  - check for overlapping events: `PK = 'SLOT', SK between dates of new event`
   - TransactWriteItems:
-    - PK = 'EVENT', SK = event id:
+    - `PK = 'EVENT', SK = event id`:
       create event object (check if item with event-id doesn't exist)
-    - PK = 'SLOT', SK = slot date:
+    - `PK = 'SLOT', SK = slot date`:
       create time slot items (check if items don't exist)
 
 ### For a given event id, delete an event (deleteEvent)
 
-  - PK = 'EVENT', SK = event id: get event object (EVENT-VERSION), and calculate time slots from event
+  - `PK = 'EVENT', SK = event id`: get event object (EVENT-VERSION), and calculate time slots from event
   - TransactWriteItems:
-    - PK = 'EVENT', SK = event id:
+    - `PK = 'EVENT', SK = event id`:
       delete event object if version matches EVENT-VERSION (event did not get updated/deleted in-between)
-    - PK = 'SLOT', SK = slot date:
+    - `PK = 'SLOT', SK = slot date`:
       delete time slot items
 
 ### For a given event id, update an event (updateEvent)
 
-  - PK = 'EVENT', SK = event id: get event object (EVENT-VERSION), and calculate time slots from event
+  - `PK = 'EVENT', SK = event id`: get event object (EVENT-VERSION), and calculate time slots from event
   - compute delta (title, start, end)
   - check for overlapping events: PK = 'SLOT', SK between dates of new event
   - TransactWriteItems:
-    - PK = 'EVENT', SK = event id:
+    - `PK = 'EVENT', SK = event id`:
       update event object and increment version (check if version matches EVENT-VERSION)
-    - PK = 'SLOT', SK = slot date:
+    - `PK = 'SLOT', SK = slot date`:
       create slot items from delta (check if items don't exist)
-    - PK = 'SLOT', SK = slot date:
+    - `PK = 'SLOT', SK = slot date`:
       delete slot items from delta
 
 ## Concurrent creation of new events
