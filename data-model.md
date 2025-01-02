@@ -19,11 +19,11 @@ FullCalendar Event Objects: https://fullcalendar.io/docs/event-object
   - create time slot items with write transaction (check if item exists)
 - For a given event id, delete an event (deleteEvent)
   - get time slots for event id: event-id-index: PK = 'SLOT', event-id = event id
-  - delete time slot items with write transaction (check item version)
+  - delete time slot items with write transaction (check event-id and item version)
 - For a given event id, update an event (updateEvent)
   - get time slots for event id: event-id-index: PK = 'SLOT', event-id = event id
   - compute delta (title, start, end)
-  - create, update, delete slot items with write transaction (check and update item version)
+  - create, update, delete slot items with write transaction (check event-id and update item version)
 
 ## Concurrent creation of new events
 
