@@ -1,4 +1,4 @@
-# DynamoDB data model
+# DynamoDB data model for cal-app-sam
 
 ## Events
 
@@ -11,19 +11,40 @@ FullCalendar Event Objects: https://fullcalendar.io/docs/event-object
 
 ## Access Patterns
 
-- Get list of events between two dates (listEvents)
-  - PK = 'SLOT', SK between dates
-  - create list of event objects in application (event-id, title, start, end)
-- Create new event if it doesn't overlap with existing events (createEvent)
+### Get list of events within date range FROM-TO (listEvents)
+
+  - start-date-index: PK = 'EVENT', FROM < start-date < TO
+
+### Create new event if it doesn't overlap with existing events (createEvent)
+
   - check for overlapping events: PK = 'SLOT', SK between dates of new event
-  - create time slot items with write transaction (check if item exists)
-- For a given event id, delete an event (deleteEvent)
-  - get time slots for event id: event-id-index: PK = 'SLOT', event-id = event id
-  - delete time slot items with write transaction (check event-id and item version)
-- For a given event id, update an event (updateEvent)
-  - get time slots for event id: event-id-index: PK = 'SLOT', event-id = event id
+  - TransactWriteItems:
+    - PK = 'EVENT', SK = event id:
+      create event object (check if item with event-id doesn't exist)
+    - PK = 'SLOT', SK = slot date:
+      create time slot items (check if items don't exist)
+
+### For a given event id, delete an event (deleteEvent)
+
+  - PK = 'EVENT', SK = event id: get event object (EVENT-VERSION), and calculate time slots from event
+  - TransactWriteItems:
+    - PK = 'EVENT', SK = event id:
+      delete event object if version matches EVENT-VERSION (event did not get updated/deleted in-between)
+    - PK = 'SLOT', SK = slot date:
+      delete time slot items
+
+### For a given event id, update an event (updateEvent)
+
+  - PK = 'EVENT', SK = event id: get event object (EVENT-VERSION), and calculate time slots from event
   - compute delta (title, start, end)
-  - create, update, delete slot items with write transaction (check/update event-id and item version)
+  - check for overlapping events: PK = 'SLOT', SK between dates of new event
+  - TransactWriteItems:
+    - PK = 'EVENT', SK = event id:
+      update event object and increment version (check if version matches EVENT-VERSION)
+    - PK = 'SLOT', SK = slot date:
+      create slot items from delta (check if items don't exist)
+    - PK = 'SLOT', SK = slot date:
+      delete slot items from delta
 
 ## Concurrent creation of new events
 
@@ -34,13 +55,23 @@ FullCalendar Event Objects: https://fullcalendar.io/docs/event-object
 
 ## Table Schema
 
-- PK: 'SLOT'
-- SK: date YYYY-MM-DD (per night, e.g. 2025-01-02 for night from Jan 2nd to Jan 3rd)
-- event-id: event id in UUID format (e.g. 503fe1d8-1672-44a1-8b28-59b3bf18bc9f)
-- title
+### FullCalendar event objects
+
+Used to get store event objects in db.
+
+- PK: 'EVENT'
+- SK: event id (UUID format)
+- start-date: start date YYYY-MM-DD (LSI: start-date-index)
+- end-date: end date YYYY-MM-DD (exclusive)
+- title: owner of the event
 - version: integer, incremented when item is updated
 
-LSI event-id (event-id-index)
+### Event time slots (per night)
+
+Used to cocurrently check for event overlaps, without locking the db.
+
+- PK: 'SLOT'
+- SK: date YYYY-MM-DD (per night, e.g. 2025-01-02 for night from Jan 2nd to Jan 3rd)
 
 [write-tx]: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/transaction-apis.html#transaction-apis-txwriteitems
 [cond-exp]: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.ConditionExpressions.html#Expressions.ConditionExpressions.PreventingOverwrites
