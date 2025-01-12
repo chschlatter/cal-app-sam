@@ -2,8 +2,15 @@
 
 const i18n = require("../i18n");
 const { HttpError } = require("../common/httpError");
+const { UsersModel: Users } = require("../model/users.model");
 const { createLambdaHandler } = require("../common/lambdaHandler");
-const { EventsModel, EventsError } = require("../model/events2.model");
+const {
+  EventsModelNoLock,
+  EventsError,
+} = require("../model/events.model-DynNoLock");
+
+// init dynamodb during cold start, since we get more CPU
+const events = new EventsModelNoLock();
 
 const handlerOptions = {
   validate: {
@@ -38,8 +45,11 @@ const updateEvent = async (request) => {
   }
 
   try {
-    const events = new EventsModel();
     const eventFromDb = await events.get(eventId);
+
+    if (request.body.id !== eventId) {
+      throw new HttpError(400, i18n.t("error.idMismatch"));
+    }
 
     // authorize user
     if (request.user.role !== "admin") {
@@ -51,7 +61,9 @@ const updateEvent = async (request) => {
       }
     }
 
-    return await events.update(request.body);
+    const updatedEvent = await events.update(eventFromDb, request.body);
+    updatedEvent.color = new Users().getUserColor(updatedEvent.title);
+    return updatedEvent;
   } catch (err) {
     if (err instanceof EventsError) {
       switch (err.code) {
@@ -67,8 +79,16 @@ const updateEvent = async (request) => {
             i18n.t("error.eventMaxDays", { maxDays: err.data.maxDays }),
             err.data
           );
+        case "event_min_days":
+          throw new HttpError(
+            400,
+            i18n.t("error.eventMinDays", { minDays: err.data.minDays }),
+            err.data
+          );
         case "event_validation":
           throw new HttpError(400, i18n.t("error.eventValidation"), err.data);
+        case "event_updated":
+          throw new HttpError(409, i18n.t("error.eventUpdated"));
         default:
           throw new HttpError(
             500,

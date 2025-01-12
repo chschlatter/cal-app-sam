@@ -1,7 +1,10 @@
 // @ts-check
 
-const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
-const { GetCommand, DynamoDBDocumentClient } = require("@aws-sdk/lib-dynamodb");
+const {
+  DynamoDBClient,
+  DescribeTableCommand,
+} = require("@aws-sdk/client-dynamodb");
+const { DynamoDBDocumentClient } = require("@aws-sdk/lib-dynamodb");
 
 /**
  * @typedef {import("@aws-sdk/lib-dynamodb").GetCommandOutput} GetCommandOutput
@@ -40,11 +43,8 @@ class DB {
 
     const params = {
       TableName: this.#tableName,
-      Key: {
-        id: "XXX",
-      },
     };
-    this.#initPromise = this.#client.send(new GetCommand(params));
+    this.#initPromise = this.#client.send(new DescribeTableCommand(params));
   }
 
   /**

@@ -29,6 +29,10 @@ Parameters:
     Type: String
     Description: The DynamoDB table name to store events
     Default: cal_events_dev
+  EventsNoLockTable:
+    Type: String
+    Description: The DynamoDB table name to store additional events
+    Default: cal_events_no_lock_dev
   LocksTable:
     Type: String
     Description: The DynamoDB table name to store locks
@@ -48,51 +52,33 @@ Conditions:
     - test
 
 Resources:
-  # DynamoDB table to store lock records
-  DbLocksTable:
+  # DynamoDB table to store events with LSI for start-date
+  DbEventsNoLockTable:
     Type: AWS::DynamoDB::Table
     DeletionPolicy: Retain
     Properties:
-      TableName: !Ref LocksTable
+      TableName: !Ref EventsNoLockTable
       AttributeDefinitions:
-        - AttributeName: resource
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+        - AttributeName: startDate
           AttributeType: S
       KeySchema:
-        - AttributeName: resource
+        - AttributeName: PK
           KeyType: HASH
-      ProvisionedThroughput:
-        ReadCapacityUnits: 1
-        WriteCapacityUnits: 1
-
-  # DynamoDB table to store event records (global secondary index for date range queries)
-  DbEventsTable:
-    Type: AWS::DynamoDB::Table
-    DeletionPolicy: Retain
-    Properties:
-      TableName: !Ref EventsTable
-      AttributeDefinitions:
-        - AttributeName: id
-          AttributeType: S
-        - AttributeName: type
-          AttributeType: S
-        - AttributeName: end
-          AttributeType: S
-      KeySchema:
-        - AttributeName: id
-          KeyType: HASH
-      GlobalSecondaryIndexes:
-        - IndexName: type-end-index
+        - AttributeName: SK
+          KeyType: RANGE
+      LocalSecondaryIndexes:
+        - IndexName: startDateIndex
           KeySchema:
-            - AttributeName: type
+            - AttributeName: PK
               KeyType: HASH
-            - AttributeName: end
+            - AttributeName: startDate
               KeyType: RANGE
           Projection:
             ProjectionType: ALL
-          # Indexes need their own provisioned throughput (!)
-          ProvisionedThroughput:
-            ReadCapacityUnits: 5
-            WriteCapacityUnits: 5
       ProvisionedThroughput:
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5
@@ -105,10 +91,10 @@ Resources:
       Description: List events between two dates
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref EventsTable
+            TableName: !Ref EventsNoLockTable
       Environment:
         Variables:
-          EVENTS_TABLE: !Ref EventsTable
+          EVENTS_TABLE: !Ref EventsNoLockTable
       Events:
         Api:
           Type: Api
@@ -127,12 +113,10 @@ Resources:
       Description: Create a new event
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref EventsTable
-        - DynamoDBCrudPolicy:
-            TableName: !Ref LocksTable
+            TableName: !Ref EventsNoLockTable
       Environment:
         Variables:
-          EVENTS_TABLE: !Ref EventsTable
+          EVENTS_TABLE: !Ref EventsNoLockTable
           LOCKS_TABLE: !Ref LocksTable
       Events:
         Api:
@@ -152,12 +136,10 @@ Resources:
       Description: Update an event
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref EventsTable
-        - DynamoDBCrudPolicy:
-            TableName: !Ref LocksTable
+            TableName: !Ref EventsNoLockTable
       Environment:
         Variables:
-          EVENTS_TABLE: !Ref EventsTable
+          EVENTS_TABLE: !Ref EventsNoLockTable
           LOCKS_TABLE: !Ref LocksTable
       Events:
         Api:
@@ -177,12 +159,10 @@ Resources:
       Description: Delete an event
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref EventsTable
-        - DynamoDBCrudPolicy:
-            TableName: !Ref LocksTable
+            TableName: !Ref EventsNoLockTable
       Environment:
         Variables:
-          EVENTS_TABLE: !Ref EventsTable
+          EVENTS_TABLE: !Ref EventsNoLockTable
           LOCKS_TABLE: !Ref LocksTable
       Events:
         Api:
@@ -274,12 +254,10 @@ Resources:
       Description: Test function
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref EventsTable
-        - DynamoDBCrudPolicy:
-            TableName: !Ref LocksTable
+            TableName: !Ref EventsNoLockTable
       Environment:
         Variables:
-          EVENTS_TABLE: !Ref EventsTable
+          EVENTS_TABLE: !Ref EventsNoLockTable
           LOCKS_TABLE: !Ref LocksTable
       Events:
         AuthToken:

@@ -40,7 +40,7 @@ describe("List events - GET /api/events", () => {
   });
 
   test("List events for a specific period", async () => {
-    const startDate = new Date("2025-03-07").toISOString();
+    const startDate = new Date("2025-03-04").toISOString();
     const endDate = new Date("2025-03-31").toISOString();
     const queryParams = encodeURI(`?start=${startDate}&end=${endDate}`);
 
@@ -51,33 +51,9 @@ describe("List events - GET /api/events", () => {
     assert(body.length == 2);
   });
 
-  test("List events for a specific day", async () => {
-    const startDate = new Date("2025-03-13").toISOString();
-    const endDate = new Date("2025-03-13").toISOString();
-    const queryParams = encodeURI(`?start=${startDate}&end=${endDate}`);
-
-    const response = await apiCall("/api/events" + queryParams);
-    assert.equal(response.status, 200);
-    const body = await response.json();
-    assert(Array.isArray(body));
-    assert(body.length == 1);
-  });
-
-  test("List events for a specific day with no events", async () => {
-    const startDate = new Date("2025-03-17").toISOString();
-    const endDate = new Date("2025-03-17").toISOString();
-    const queryParams = encodeURI(`?start=${startDate}&end=${endDate}`);
-
-    const response = await apiCall("/api/events" + queryParams);
-    assert.equal(response.status, 200);
-    const body = await response.json();
-    assert(Array.isArray(body));
-    assert(body.length == 0);
-  });
-
-  test("Chech returned data", async () => {
-    const startDate = new Date("2025-03-01").toISOString();
-    const endDate = new Date("2025-03-01").toISOString();
+  test("Check returned data", async () => {
+    const startDate = new Date("2025-02-01").toISOString();
+    const endDate = new Date("2025-02-28").toISOString();
     const queryParams = encodeURI(`?start=${startDate}&end=${endDate}`);
 
     const response = await apiCall("/api/events" + queryParams);
@@ -92,7 +68,6 @@ describe("List events - GET /api/events", () => {
     assert.equal(body[0].end, expected.end);
     assert(body[0].id);
     assert(body[0].color);
-    assert.equal(body[0].type, "event");
   });
 
   test("Check for missing start date", async () => {

@@ -2,8 +2,12 @@
 
 const i18n = require("../i18n");
 const { HttpError } = require("../common/httpError");
+const { UsersModel: Users } = require("../model/users.model");
 const { createLambdaHandler } = require("../common/lambdaHandler");
-const { EventsModel, EventsError } = require("../model/events2.model");
+const {
+  EventsModelNoLock,
+  EventsError,
+} = require("../model/events.model-DynNoLock");
 
 const handlerOptions = {
   validate: {
@@ -19,6 +23,9 @@ const handlerOptions = {
     end: { type: "ISOdate", required: true },
   },
 };
+
+// init dynamodb during cold start, since we get more CPU
+const events = new EventsModelNoLock();
 
 /**
  * AWS Lambda function handler to create an event in a DynamoDB table
@@ -39,8 +46,9 @@ const createEvent = async (request) => {
   }
 
   try {
-    const events = new EventsModel();
-    return await events.create(newEvent);
+    const createdEvent = await events.create(newEvent);
+    createdEvent.color = new Users().getUserColor(createdEvent.title);
+    return createdEvent;
   } catch (err) {
     if (err instanceof EventsError) {
       switch (err.code) {
@@ -54,6 +62,12 @@ const createEvent = async (request) => {
           throw new HttpError(
             400,
             i18n.t("error.eventMaxDays", { maxDays: err.data.maxDays }),
+            err.data
+          );
+        case "event_min_days":
+          throw new HttpError(
+            400,
+            i18n.t("error.eventMinDays", { minDays: err.data.minDays }),
             err.data
           );
         case "event_validation":

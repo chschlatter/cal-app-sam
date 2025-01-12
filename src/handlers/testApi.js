@@ -6,7 +6,9 @@ const { UsersModel: Users } = require("../model/users.model");
 const jwt = require("jsonwebtoken");
 const { getSecret } = require("../secrets");
 const { createSessionCookie } = require("../cookieAuth");
-const { EventsModel } = require("../model/events2.model");
+const {
+  EventsModelNoLock: EventsModel,
+} = require("../model/events.model-DynNoLock");
 
 /**
  * body schema for the POST request

@@ -23,10 +23,13 @@ const phrases = {
     "error.eventNotFound": "Event not found.",
     "error.eventOverlaps": "Event overlaps with existing event.",
     "error.eventMaxDays": "Event exceeds maximum of %{maxDays} days.",
+    "error.eventMinDays": "Event is less than minimum of %{minDays} days.",
+    "error.eventUpdated": "Event updated by another user.",
     "error.eventValidation": "Event validation error.",
     "error.eventInvalidTitle": "Invalid title %{title}.",
     "error.eventStartAfterEndDate": "Event start is after end date.",
     "error.eventStartEndRequired": "Event start and end required.",
+    "error.idMismatch": "ID mismatch.",
     "error.unauthorized": "Unauthorized.",
     "error.userNotFound": "User not found.",
     "error.missingGoogleAuth": "Missing Google authentication.",
@@ -56,12 +59,17 @@ const phrases = {
       "Reservation überschneidet sich mit bestehender Reservation.",
     "error.eventMaxDays":
       "Reservation überschreitet das Maximum von %{maxDays} Tagen.",
+    "error.eventMinDays":
+      "Reservation ist weniger als das Minimum von %{minDays} Tagen.",
+    "error.eventUpdated":
+      "Reservation wurde von einem anderen Benutzer aktualisiert.",
     "error.eventValidation": "Fehler bei der Reservierungsvalidierung.",
     "error.eventInvalidTitle": "Ungültiger Titel %{title}.",
     "error.eventStartAfterEndDate":
       "Start der Reservation liegt nach dem Enddatum.",
     "error.eventStartEndRequired":
       "Start und Ende der Reservation erforderlich.",
+    "error.idMismatch": "ID stimmt nicht überein.",
     "error.unauthorized": "Unberechtigt.",
     "error.userNotFound": "Benutzer nicht gefunden.",
     "error.missingGoogleAuth": "Fehlende Google-Authentifizierung.",
