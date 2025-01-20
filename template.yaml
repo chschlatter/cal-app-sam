@@ -25,18 +25,10 @@ Parameters:
       - prod
       - test
     ConstraintDescription: must specify prod or test.
-  EventsTable:
-    Type: String
-    Description: The DynamoDB table name to store events
-    Default: cal_events_dev
   EventsNoLockTable:
     Type: String
     Description: The DynamoDB table name to store additional events
     Default: cal_events_no_lock_dev
-  LocksTable:
-    Type: String
-    Description: The DynamoDB table name to store locks
-    Default: cal_locks_dev
   CFDistCNAME:
     Type: String
     Description: The CloudFront distribution CNAME
@@ -117,7 +109,6 @@ Resources:
       Environment:
         Variables:
           EVENTS_TABLE: !Ref EventsNoLockTable
-          LOCKS_TABLE: !Ref LocksTable
       Events:
         Api:
           Type: Api
@@ -140,7 +131,6 @@ Resources:
       Environment:
         Variables:
           EVENTS_TABLE: !Ref EventsNoLockTable
-          LOCKS_TABLE: !Ref LocksTable
       Events:
         Api:
           Type: Api
@@ -163,7 +153,6 @@ Resources:
       Environment:
         Variables:
           EVENTS_TABLE: !Ref EventsNoLockTable
-          LOCKS_TABLE: !Ref LocksTable
       Events:
         Api:
           Type: Api
@@ -258,7 +247,6 @@ Resources:
       Environment:
         Variables:
           EVENTS_TABLE: !Ref EventsNoLockTable
-          LOCKS_TABLE: !Ref LocksTable
       Events:
         AuthToken:
           Type: Api
@@ -279,6 +267,49 @@ Resources:
       BuildMethod: esbuild
       BuildProperties:
         External: ["@aws-sdk"]
+
+  # Lambda function for backing up events to S3 (for LockDb)
+  BackupEventsLockDbFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/backupEventsLockDb.handler
+      Description: Functions to backup/restore events to/from S3
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref EventsNoLockTable
+        - DynamoDBWritePolicy:
+            TableName: !Ref EventsNoLockTable
+        - S3WritePolicy:
+            BucketName: !Ref BackupS3Bucket
+        - S3ReadPolicy:
+            BucketName: !Ref BackupS3Bucket
+      Environment:
+        Variables:
+          EVENTS_TABLE: !Ref EventsNoLockTable
+          BACKUP_BUCKET: !Ref BackupS3Bucket
+          API_TOKEN: !Sub "{{resolve:ssm:/${AWS::StackName}/API_TOKEN}}"
+      Events:
+        BackupEvents:
+          Type: Api
+          Properties:
+            Path: /api/events/backup
+            Method: POST
+        RestoreEvents:
+          Type: Api
+          Properties:
+            Path: /api/events/restore
+            Method: POST
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        External: ["@aws-sdk"]
+
+  # S3 bucket to store backups
+  BackupS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${AWS::StackName}-backups"
+      AccessControl: Private
 
   # S3 bucket to store the web application (Dev)
   # with a policy to allow access from cloudfront (no public access)

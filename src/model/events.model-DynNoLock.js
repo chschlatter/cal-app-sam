@@ -178,7 +178,6 @@ export class EventsModelNoLock {
           TransactItems: [eventPutInputOp, ...slotPutInputOps],
         })
       );
-      console.log("TransactWriteCommand result", result);
       return event;
     } catch (error) {
       if (error.name === "TransactionCanceledException") {
