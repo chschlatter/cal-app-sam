@@ -40,9 +40,11 @@ class DbItemsForBackup extends Readable {
         this.#lastEvaluatedKey = data.LastEvaluatedKey;
         console.log("LastEvaluatedKey:", this.#lastEvaluatedKey);
         if (data.Items && data.Items.length > 0) {
-          data.Items.forEach((item) => {
-            this.push(JSON.stringify(item) + "\n");
-          });
+          const jsonLines = data.Items.reduce((acc, item) => {
+            acc.push(JSON.stringify(item) + "\n");
+            return acc;
+          }, []);
+          this.push(jsonLines.join(""));
         }
         if (this.#lastEvaluatedKey === undefined) {
           this.push(null);
@@ -74,11 +76,20 @@ class LogLinesFromRestore extends Readable {
           title: item.title,
         })
         .then(() => {
-          this.push("Event restored\n");
+          const logObj = {
+            action: "create",
+            item,
+          };
+          this.push(JSON.stringify(logObj) + "\n");
         })
         .catch((error) => {
           console.error("Error restoring event:", error);
-          this.push("Error restoring event\n");
+          const logObj = {
+            action: "error",
+            item,
+            error: error.message,
+          };
+          this.push(JSON.stringify(logObj) + "\n");
         });
     } else {
       this.push(null);
