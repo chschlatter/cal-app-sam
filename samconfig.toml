@@ -32,7 +32,7 @@ watch = true
 stack_name = "cal-app-sam"
 parameter_overrides = """
   EnvType="prod"
-  EventsTable="cal_events_no_lock"
+  EventsNoLockTable="cal_events_no_lock"
   CFDistCNAME="adelboden.schlatter.net"
   CFDistViewerCertificate="arn:aws:acm:us-east-1:374093763622:certificate/40ae7d6a-4579-4ed1-8317-de645fb41539"
 """
