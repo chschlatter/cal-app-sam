@@ -71,9 +71,7 @@ Resources:
               KeyType: RANGE
           Projection:
             ProjectionType: ALL
-      ProvisionedThroughput:
-        ReadCapacityUnits: 5
-        WriteCapacityUnits: 5
+      BillingMode: PAY_PER_REQUEST
 
   # This is a Lambda function config associated with the source code: listEvents.handler.js
   listEvents:
