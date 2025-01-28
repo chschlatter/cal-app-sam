@@ -41,6 +41,11 @@ class DbItemsForBackup extends Readable {
         console.log("LastEvaluatedKey:", this.#lastEvaluatedKey);
         if (data.Items && data.Items.length > 0) {
           const jsonLines = data.Items.reduce((acc, item) => {
+            // map to fullcalendar format, keep remaining fields
+            item.start = item.startDate;
+            item.end = item.endDate;
+            delete item.startDate;
+            delete item.endDate;
             acc.push(JSON.stringify(item) + "\n");
             return acc;
           }, []);
@@ -71,8 +76,8 @@ class LogLinesFromRestore extends Readable {
       const item = this.#items.shift();
       this.#events
         .create({
-          start: item.startDate,
-          end: item.endDate,
+          start: item.start,
+          end: item.end,
           title: item.title,
         })
         .then(() => {
