@@ -301,7 +301,7 @@ Resources:
           Type: Schedule
           Properties:
             Schedule: cron(0 3 * * ? *) # every day at 3am
-            Name: DailyBackupSchedule
+            Name: !Sub "DailyBackupSchedule-${EnvType}"
             Description: "Trigger BackupEventsLockDbFunction once per day"
             Input: '{"type": "backup"}'
     Metadata:
