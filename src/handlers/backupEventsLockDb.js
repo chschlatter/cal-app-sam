@@ -14,10 +14,26 @@ const dbClient = new DynamoDBClient({});
 const db = DynamoDBDocumentClient.from(dbClient);
 
 exports.handler = async (event) => {
-  if (event.path === "/api/events/backup") {
-    return backup(event);
-  } else if (event.path === "/api/events/restore") {
-    return restore(event);
+  console.log("event:", event);
+
+  if (event.httpMethod) {
+    const apiToken = event.headers["x-api-token"];
+    if (apiToken !== API_TOKEN) {
+      return {
+        statusCode: 403,
+        body: JSON.stringify({ message: "Forbidden" }),
+      };
+    }
+
+    if (event.path === "/api/events/backup") {
+      return backup(event);
+    } else if (event.path === "/api/events/restore") {
+      return restore(event);
+    }
+  } else if (event.type) {
+    if (event.type === "backup") {
+      return backup(event);
+    }
   }
 };
 
@@ -103,54 +119,38 @@ class LogLinesFromRestore extends Readable {
 }
 
 const backup = async (event) => {
-  const apiToken = event.headers["x-api-token"];
-  if (apiToken !== API_TOKEN) {
-    return {
-      statusCode: 403,
-      body: JSON.stringify({ message: "Forbidden" }),
-    };
-  }
   const timestamp = new Date().toISOString();
   const backupFileName = `backups/events-backup-${timestamp}.jsonl`;
 
-  const upload = new Upload({
-    client: new S3Client({}),
-    params: {
-      Bucket: BACKUP_BUCKET,
-      Key: backupFileName,
-      Body: new DbItemsForBackup(),
-    },
-  });
-  upload.on("httpUploadProgress", (progress) => {
-    console.log(progress);
-  });
+  try {
+    const upload = new Upload({
+      client: new S3Client({}),
+      params: {
+        Bucket: BACKUP_BUCKET,
+        Key: backupFileName,
+        Body: new DbItemsForBackup(),
+      },
+    });
+    upload.on("httpUploadProgress", (progress) => {
+      console.log("progress:", progress);
+    });
 
-  upload.on("error", (error) => {
-    console.error("Error during upload:", error);
+    const uploadResult = await upload.done();
+    console.log("done uploading", uploadResult);
+
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ message: "Backup successful", backupFileName }),
+    };
+  } catch (error) {
     return {
       statusCode: 500,
       body: JSON.stringify({ message: "Backup failed", error: error.message }),
     };
-  });
-
-  const uploadResult = await upload.done();
-  console.log("done uploading", uploadResult);
-
-  return {
-    statusCode: 200,
-    body: JSON.stringify({ message: "Backup successful", backupFileName }),
-  };
+  }
 };
 
 const restore = async (event) => {
-  const apiToken = event.headers["x-api-token"];
-  if (apiToken !== API_TOKEN) {
-    return {
-      statusCode: 403,
-      body: JSON.stringify({ message: "Forbidden" }),
-    };
-  }
-
   try {
     const backupFileName = event.queryStringParameters.fileName;
     const client = new S3Client({});

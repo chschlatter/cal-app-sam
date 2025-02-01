@@ -297,6 +297,13 @@ Resources:
           Properties:
             Path: /api/events/restore
             Method: POST
+        ScheduledBackup:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 3 * * ? *) # every day at 3am
+            Name: DailyBackupSchedule
+            Description: "Trigger BackupEventsLockDbFunction once per day"
+            Input: '{"type": "backup"}'
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
