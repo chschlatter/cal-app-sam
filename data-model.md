@@ -13,38 +13,45 @@ FullCalendar Event Objects: https://fullcalendar.io/docs/event-object
 
 ### Get list of events within date range FROM-TO (listEvents)
 
-  - `start-date-index: PK = 'EVENT', FROM < start-date < TO`
+- `startDateIndex: PK = 'EVENT', FROM < start-date < TO`
 
 ### Create new event if it doesn't overlap with existing events (createEvent)
 
-  - check for overlapping events: `PK = 'SLOT', SK between dates of new event`
-  - TransactWriteItems:
-    - `PK = 'EVENT', SK = event id`:
-      create event object (check if item with event-id doesn't exist)
-    - `PK = 'SLOT', SK = slot date`:
-      create time slot items (check if items don't exist)
+- Write TX to put event object and time slot items
+  - Event object item:
+    `Put: PK = 'EVENT', SK = eventId`:
+    create event object (check if item with eventId doesn't exist)
+  - Time slot items:
+    `Put: PK = 'SLOT', SK = slot date`:
+    create time slot items (check if items don't exist)
 
 ### For a given event id, delete an event (deleteEvent)
 
-  - `PK = 'EVENT', SK = event id`: get event object (EVENT-VERSION), and calculate time slots from event
-  - TransactWriteItems:
-    - `PK = 'EVENT', SK = event id`:
-      delete event object if version matches EVENT-VERSION (event did not get updated/deleted in-between)
-    - `PK = 'SLOT', SK = slot date`:
-      delete time slot items
+- Get event object to delete; store eventVersion
+  `Get: PK = 'EVENT', SK = eventId`
+- Write TX to delete event object and time slot items
+  - Event object item:
+    `Delete: PK = 'EVENT', SK = eventId`:
+    delete event object (check if version matches eventVersion)
+  - Time slot items:
+    `Delete: PK = 'SLOT', SK = slot date`:
+    delete time slot items
 
-### For a given event id, update an event (updateEvent)
+### For a given event id, update the event (updateEvent)
 
-  - `PK = 'EVENT', SK = event id`: get event object (EVENT-VERSION), and calculate time slots from event
-  - compute delta (title, start, end)
-  - check for overlapping events: PK = 'SLOT', SK between dates of new event
-  - TransactWriteItems:
-    - `PK = 'EVENT', SK = event id`:
-      update event object and increment version (check if version matches EVENT-VERSION)
-    - `PK = 'SLOT', SK = slot date`:
-      create slot items from delta (check if items don't exist)
-    - `PK = 'SLOT', SK = slot date`:
-      delete slot items from delta
+- Get event object to update; store eventVersion
+  `Get: PK = 'EVENT', SK = eventId`
+- Calculate time slots to add and delete: deltaSlotItems
+- Write TX to update event object and add/delete time slot items
+  - Event object item:
+    `Update: PK = 'EVENT', SK = eventId`:
+    update event object title/start/end and increment version (check if version matches eventVersion)
+  - Add time slot items:
+    `Put: PK = 'SLOT', SK = slot date`:
+    add time slot events from deltaSlotItems (check if item does not exist)
+  - Delete time slot items:
+    `Delete: PK = 'SLOT', SK = slot date`:
+    delete time slot events from deltaSlotItems
 
 ## Concurrent creation of new events
 
@@ -61,10 +68,14 @@ Used to store event objects in db.
 
 - PK: 'EVENT'
 - SK: event id (UUID format)
-- start-date: start date YYYY-MM-DD (LSI: start-date-index)
-- end-date: end date YYYY-MM-DD (exclusive)
+- startDate: start date YYYY-MM-DD
+- endDate: end date YYYY-MM-DD (exclusive)
 - title: owner of the event
 - version: integer, incremented when item is updated
+
+- Local Secondary Index (LSI): startDateIndex
+  - Hash: PK
+  - Range: startDate
 
 ### Event time slots (per night)
 
