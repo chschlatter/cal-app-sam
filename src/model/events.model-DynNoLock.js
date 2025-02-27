@@ -3,9 +3,6 @@
 const {
   GetCommand,
   QueryCommand,
-  PutCommand,
-  DeleteCommand,
-  UpdateCommand,
   TransactWriteCommand,
 } = require("@aws-sdk/lib-dynamodb");
 const { v4: uuidv4 } = require("uuid");
@@ -40,7 +37,7 @@ const maxDays = 90;
 export class EventsError extends Error {
   /**
    * @param {string} message
-   * @param {"start_end_required"|"event_not_found"|"event_overlaps"|"event_max_days"|"event_min_days"|"event_validation"|"event_updated"} errorCode
+   * @param {"start_end_required"|"end_before_start"|"event_not_found"|"event_overlaps"|"event_max_days"|"event_min_days"|"event_validation"|"event_updated"} errorCode
    * @param {Object} [data]
    * @param {boolean} [data.overlap_start]
    * @param {boolean} [data.overlap_end]
@@ -71,8 +68,8 @@ export class EventsModelNoLock {
 
   /**
    * Retrieves a list of events within the specified start and end dates.
-   * @param {string} start - The start date of the range.
-   * @param {string} end - The end date of the range.
+   * @param {string | undefined} start - The start date of the range.
+   * @param {string | undefined } end - The end date of the range.
    * @returns {Promise<Array<Event>>} - A promise that resolves to an array of event objects.
    * @throws {createError.BadRequest} - If start or end query params are missing.
    */
@@ -81,6 +78,13 @@ export class EventsModelNoLock {
       throw new EventsError(
         "start and end params are required",
         "start_end_required"
+      );
+    }
+
+    if (end <= start) {
+      throw new EventsError(
+        "End date must be after start date",
+        "end_before_start"
       );
     }
 

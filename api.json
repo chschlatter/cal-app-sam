@@ -1,0 +1,379 @@
+{
+  "openapi": "3.0.1",
+  "info": { "title": "Calendar API", "version": "1.0" },
+  "paths": {
+    "/api/events": {
+      "get": {
+        "security": [{ "cookieAuth": [] }],
+        "summary": "List events",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "start",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}\\-(0?[1-9]|1[012])\\-(0?[1-9]|[12][0-9]|3[01])"
+            },
+            "description": "Start date",
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}\\-(0?[1-9]|1[012])\\-(0?[1-9]|[12][0-9]|3[01])"
+            },
+            "description": "End date",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Event" }
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${listEvents.Arn}/invocations"
+          },
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        },
+        "x-amazon-apigateway-request-validator": "ValidateParameters"
+      },
+      "post": {
+        "security": [{ "cookieAuth": [] }],
+        "summary": "Create an event",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateEventParams" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Create an event",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Event" }
+              }
+            }
+          },
+          "400": { "description": "Bad request" }
+        },
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${createEvent.Arn}/invocations"
+          },
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        },
+        "x-amazon-apigateway-request-validator": "ValidateBody"
+      }
+    },
+    "/api/events/{id}": {
+      "put": {
+        "security": [{ "cookieAuth": [] }],
+        "summary": "Update an event",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Event" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated an event",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Event" }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${updateEvent.Arn}/invocations"
+          },
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        }
+      },
+      "delete": {
+        "security": [{ "cookieAuth": [] }],
+        "summary": "Delete an event",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": { "200": { "description": "Event deleted" } },
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${deleteEvent.Arn}/invocations"
+          },
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        }
+      }
+    },
+    "/api/users": {
+      "get": {
+        "security": [{ "cookieAuth": [] }],
+        "summary": "List users",
+        "responses": {
+          "200": {
+            "description": "List of users",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/User" }
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${listUsers.Arn}/invocations"
+          },
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        }
+      }
+    },
+    "/api/auth": {
+      "get": {
+        "security": [{ "cookieAuth": [] }],
+        "summary": "Authenticate a user",
+        "responses": {
+          "200": {
+            "description": "User authenticated",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/User" }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${auth.Arn}/invocations"
+          },
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        }
+      }
+    },
+    "/api/login": {
+      "post": {
+        "summary": "Login a user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoginParams" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User logged in",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/User" }
+              }
+            },
+            "headers": { "Set-Cookie": { "schema": { "type": "string" } } }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${login.Arn}/invocations"
+          },
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        },
+        "x-amazon-apigateway-request-validator": "ValidateBody"
+      }
+    },
+    "/api/prices": {
+      "get": {
+        "security": [{ "cookieAuth": [] }],
+        "summary": "Get prices",
+        "responses": { "200": { "description": "Get prices" } },
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${getPrices.Arn}/invocations"
+          },
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        }
+      }
+    },
+    "/api/test/auth": {
+      "get": {
+        "responses": { "200": { "description": "Test authentication" } },
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${test.Arn}/invocations"
+          },
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        }
+      }
+    },
+    "/api/test/events": {
+      "post": {
+        "responses": { "200": { "description": "Test events" } },
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${test.Arn}/invocations"
+          },
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        }
+      }
+    },
+    "/api/test/events/{year}": {
+      "delete": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "year",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": { "200": { "description": "Test events" } },
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${test.Arn}/invocations"
+          },
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        }
+      }
+    },
+    "/api/events/backup": {
+      "post": {
+        "security": [{ "apiKeyAuth": [] }],
+        "summary": "Backup events",
+        "responses": { "200": { "description": "Backup events" } },
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${BackupEventsLockDbFunction.Arn}/invocations"
+          },
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        }
+      }
+    },
+    "/api/events/restore": {
+      "post": {
+        "security": [{ "apiKeyAuth": [] }],
+        "summary": "Restore events",
+        "responses": { "200": { "description": "Restore events" } },
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${BackupEventsLockDbFunction.Arn}/invocations"
+          },
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CreateEventParams": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string" },
+          "start": {
+            "type": "string",
+            "pattern": "^\\d{4}\\-(0?[1-9]|1[012])\\-(0?[1-9]|[12][0-9]|3[01])$"
+          },
+          "end": {
+            "type": "string",
+            "pattern": "^\\d{4}\\-(0?[1-9]|1[012])\\-(0?[1-9]|[12][0-9]|3[01])$"
+          }
+        },
+        "required": ["title", "start", "end"]
+      },
+      "Event": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "start": { "type": "string", "format": "date" },
+          "end": { "type": "string", "format": "date" },
+          "color": { "type": "string" }
+        },
+        "required": ["id", "title", "start", "end"]
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "role": { "type": "string", "enum": ["admin", "user"] },
+          "color": { "type": "string" },
+          "googleId": { "type": "string" }
+        },
+        "required": ["name", "role"]
+      },
+      "LoginParams": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "stayLoggedIn": { "type": "boolean" },
+          "gooleAuthJWT": { "type": "string" }
+        },
+        "required": ["name"]
+      }
+    },
+    "securitySchemes": {
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "access_token"
+      },
+      "apiKeyAuth": { "type": "apiKey", "in": "header", "name": "x-api-token" }
+    }
+  },
+  "x-amazon-apigateway-request-validators": {
+    "ValidateBody": {
+      "validateRequestParameters": false,
+      "validateRequestBody": true
+    },
+    "ValidateParameters": {
+      "validateRequestParameters": true,
+      "validateRequestBody": false
+    }
+  }
+}

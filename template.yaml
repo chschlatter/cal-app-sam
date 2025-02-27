@@ -73,6 +73,16 @@ Resources:
             ProjectionType: ALL
       BillingMode: PAY_PER_REQUEST
 
+  CalApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      DefinitionBody:
+        "Fn::Transform":
+          Name: AWS::Include
+          Parameters:
+            Location: "api.json"
+
   # This is a Lambda function config associated with the source code: listEvents.handler.js
   listEvents:
     Type: AWS::Serverless::Function
@@ -85,16 +95,18 @@ Resources:
       Environment:
         Variables:
           EVENTS_TABLE: !Ref EventsNoLockTable
-      Events:
-        Api:
-          Type: Api
-          Properties:
-            Path: /api/events
-            Method: GET
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
         External: ["@aws-sdk"]
+  listEventsApiPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt listEvents.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${CalApi}/*/*/*"
+
   # This is a Lambda function config associated with the source code: createEvent.handler.js
   createEvent:
     Type: AWS::Serverless::Function
@@ -107,16 +119,18 @@ Resources:
       Environment:
         Variables:
           EVENTS_TABLE: !Ref EventsNoLockTable
-      Events:
-        Api:
-          Type: Api
-          Properties:
-            Path: /api/events
-            Method: POST
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
         External: ["@aws-sdk"]
+  createEventApiPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt createEvent.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${CalApi}/*/*/*"
+
   # This is a Lambda function config associated with the source code: updateEvent.handler.js
   updateEvent:
     Type: AWS::Serverless::Function
@@ -129,16 +143,18 @@ Resources:
       Environment:
         Variables:
           EVENTS_TABLE: !Ref EventsNoLockTable
-      Events:
-        Api:
-          Type: Api
-          Properties:
-            Path: /api/events/{id}
-            Method: PUT
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
         External: ["@aws-sdk"]
+  updateEventApiPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt updateEvent.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${CalApi}/*/*/*"
+
   # This is a Lambda function config associated with the source code: deleteEvent.handler.js
   deleteEvent:
     Type: AWS::Serverless::Function
@@ -151,48 +167,53 @@ Resources:
       Environment:
         Variables:
           EVENTS_TABLE: !Ref EventsNoLockTable
-      Events:
-        Api:
-          Type: Api
-          Properties:
-            Path: /api/events/{id}
-            Method: DELETE
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
         External: ["@aws-sdk"]
+  deleteEventApiPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt deleteEvent.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${CalApi}/*/*/*"
+
   # This is a Lambda function config associated with the source code: listUsers.handler.js
   listUsers:
     Type: AWS::Serverless::Function
     Properties:
       Handler: src/handlers/listUsers.handler
       Description: List users
-      Events:
-        Api:
-          Type: Api
-          Properties:
-            Path: /api/users
-            Method: GET
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
         External: ["@aws-sdk"]
+  listUsersApiPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt listUsers.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${CalApi}/*/*/*"
+
   # This is a Lambda function config associated with the source code: auth.handler.js
   auth:
     Type: AWS::Serverless::Function
     Properties:
       Handler: src/handlers/auth.handler
       Description: Authenticate a user
-      Events:
-        Api:
-          Type: Api
-          Properties:
-            Path: /api/auth
-            Method: GET
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
         External: ["@aws-sdk"]
+  authApiPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt auth.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${CalApi}/*/*/*"
 
   # This is a Lambda function config associated with the source code: login.handler.js
   login:
@@ -204,16 +225,17 @@ Resources:
         Variables:
           PW_HMAC_KEY: "{{resolve:ssm:/cal-app-sam/PW_HMAC_KEY}}"
           GOOGLE_CLIENT_ID: "{{resolve:ssm:/cal-app-sam/GOOGLE_CLIENT_ID}}"
-      Events:
-        Api:
-          Type: Api
-          Properties:
-            Path: /api/login
-            Method: POST
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
         External: ["@aws-sdk"]
+  loginApiPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt login.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${CalApi}/*/*/*"
 
   # This is a Lambda function config associated with the source code: getPrices.handler.js
   getPrices:
@@ -221,16 +243,17 @@ Resources:
     Properties:
       Handler: src/handlers/getPrices.handler
       Description: Get prices
-      Events:
-        Api:
-          Type: Api
-          Properties:
-            Path: /api/prices
-            Method: GET
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
         External: ["@aws-sdk"]
+  getPricesApiPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt getPrices.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${CalApi}/*/*/*"
 
   # Lambda function for test purposes
   test:
@@ -245,26 +268,18 @@ Resources:
       Environment:
         Variables:
           EVENTS_TABLE: !Ref EventsNoLockTable
-      Events:
-        AuthToken:
-          Type: Api
-          Properties:
-            Path: /api/test/auth
-            Method: GET
-        BatchCreateEvents:
-          Type: Api
-          Properties:
-            Path: /api/test/events
-            Method: POST
-        DeleteEvents:
-          Type: Api
-          Properties:
-            Path: /api/test/events/{year}
-            Method: DELETE
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
         External: ["@aws-sdk"]
+  testApiPermission:
+    Type: AWS::Lambda::Permission
+    Condition: CreateTestResources
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt test.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${CalApi}/*/*/*"
 
   # Lambda function for backing up events to S3 (for LockDb)
   BackupEventsLockDbFunction:
@@ -287,16 +302,6 @@ Resources:
           BACKUP_BUCKET: !Ref BackupS3Bucket
           API_TOKEN: !Sub "{{resolve:ssm:/${AWS::StackName}/API_TOKEN}}"
       Events:
-        BackupEvents:
-          Type: Api
-          Properties:
-            Path: /api/events/backup
-            Method: POST
-        RestoreEvents:
-          Type: Api
-          Properties:
-            Path: /api/events/restore
-            Method: POST
         ScheduledBackup:
           Type: Schedule
           Properties:
@@ -308,6 +313,13 @@ Resources:
       BuildMethod: esbuild
       BuildProperties:
         External: ["@aws-sdk"]
+  BackupEventsLockDbFunctionApiPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt BackupEventsLockDbFunction.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${CalApi}/*/*/*"
 
   # S3 bucket to store backups
   BackupS3Bucket:
@@ -383,7 +395,7 @@ Resources:
               OriginAccessIdentity: ""
             OriginAccessControlId: !GetAtt WebAppS3BucketOAC.Id
           # API Gateway endpoint
-          - DomainName: !Sub "${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com"
+          - DomainName: !Sub "${CalApi}.execute-api.${AWS::Region}.amazonaws.com"
             Id: ApiGatewayOrigin
             OriginPath: "/Prod"
             CustomOriginConfig:
@@ -441,7 +453,7 @@ Resources:
 Outputs:
   WebEndpoint:
     Description: "API Gateway endpoint URL for Prod stage"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+    Value: !Sub "https://${CalApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
   WebAppS3Bucket:
     Description: "S3 bucket for the web application"
     Value: !Ref WebAppS3Bucket

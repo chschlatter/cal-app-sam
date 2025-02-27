@@ -1,37 +1,61 @@
 // @ts-check
 
-const { HttpError, createLambdaHandler } = require("../common/lambdaHandler");
-const { EventsModelNoLock } = require("../model/events.model-DynNoLock");
+const i18n = require("../i18n");
+const {
+  EventsModelNoLock,
+  EventsError,
+} = require("../model/events.model-DynNoLock");
 const { UsersModel: Users } = require("../model/users.model");
+const { getSecret } = require("../secrets");
+
+import * as validatorModule from "../../build/validator";
+import middy from "@middy/core";
+import httpErrorHandler from "@middy/http-error-handler";
+import httpHeaderNormalizer from "@middy/http-header-normalizer";
+import httpErrorJsonFormatter, {
+  createApiError,
+} from "../middleware/http-error-json-formatter";
+import validator from "../middleware/http-openapi-validator";
+import jwtAuth from "../middleware/jwt-auth";
 
 // init dynamodb during cold start, since we get more CPU
 const events = new EventsModelNoLock();
 
 /**
- * AWS Lambda function handler to list events in a DynamoDB table
- * @param {import("../common/lambdaHandler").Request} request - HTTP request
- * @returns {Promise<import("../model/events2.model").Event[]>} - list of events
+ * Lambda function handler to list events
+ * @param {import("aws-lambda").APIGatewayEvent} event
+ * @returns {Promise<import("aws-lambda").APIGatewayProxyResult>}
  */
-const listEvents = async (request) => {
-  const result = await events.list(request.query.start, request.query.end);
-  return result.map((event) => {
-    event.color = new Users().getUserColor(event.title);
-    return event;
-  });
+const listEventsHandler = async (event) => {
+  const { start: startDate, end: endDate } = event.queryStringParameters || {};
+  try {
+    const result = await events.list(startDate, endDate);
+    return {
+      statusCode: 200,
+      body: JSON.stringify(
+        result.map((event) => {
+          event.color = new Users().getUserColor(event.title);
+          return event;
+        })
+      ),
+    };
+  } catch (error) {
+    if (error instanceof EventsError) {
+      switch (error.code) {
+        case "start_end_required":
+          throw createApiError(400, i18n.t("error.listEvents.startEnd"));
+        case "end_before_start":
+          throw createApiError(400, i18n.t("error.listEvents.endBeforeStart"));
+      }
+    }
+    throw error;
+  }
 };
 
-const handlerOptions = {
-  validate: {
-    method: "GET",
-    handler: "listEvents2.handler",
-  },
-  /**
-   * @type {import("../common/parseQueryString").QuerySchema}
-   */
-  querySchema: {
-    start: { type: "ISOdate", required: true },
-    end: { type: "ISOdate", required: true },
-  },
-};
-
-export const handler = createLambdaHandler(listEvents, handlerOptions);
+export const handler = middy()
+  .use(httpHeaderNormalizer())
+  .use(jwtAuth({ secret: getSecret("JWT_SECRET") }))
+  .use(validator({ validatorModule }))
+  .use(httpErrorJsonFormatter())
+  .use(httpErrorHandler({ fallbackMessage: "Internal server error" }))
+  .handler(listEventsHandler);

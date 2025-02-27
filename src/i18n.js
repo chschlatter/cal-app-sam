@@ -20,6 +20,7 @@ const phrases = {
     "error.login.missingName": "Missing login name.",
     "error.missingIdinPath": "Please provide id in path.",
     "error.listEvents.startEnd": "Please provide start and end query params.",
+    "error.listEvents.endBeforeStart": "End date is before start date.",
     "error.eventNotFound": "Event not found.",
     "error.eventOverlaps": "Event overlaps with existing event.",
     "error.eventMaxDays": "Event exceeds maximum of %{maxDays} days.",
@@ -54,6 +55,7 @@ const phrases = {
     "error.missingIdinPath": "Bitte geben Sie die ID im Pfad an.",
     "error.listEvents.startEnd":
       "Bitte geben Sie die Start- und End-Abfrageparameter an.",
+    "error.listEvents.endBeforeStart": "Enddatum liegt vor dem Startdatum.",
     "error.eventNotFound": "Reservation nicht gefunden.",
     "error.eventOverlaps":
       "Reservation überschneidet sich mit bestehender Reservation.",
