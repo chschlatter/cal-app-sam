@@ -1,30 +1,23 @@
 // @ts-check
 
-const handlerHelper = require("../handlerHelper");
-const access = require("../accessControl");
 const { UsersModel: Users } = require("../model/users.model");
+
+import middy from "@middy/core";
+import { getMiddlewares, createApiError } from "../common/middyDefaults.js";
 
 /**
  * AWS Lambda function handler to list users from a JSON file
- * @param {handlerHelper.ApiEventParsed} apiEvent - HTTP request with body parsed
+ * @param {import('../common/middyDefaults.js').APIGatewayEventWithParsedBody} event
  * @returns {Promise<import("aws-lambda").APIGatewayProxyResult>} - AWS Lambda HTTP response
  */
-const listUsers = async (apiEvent) => {
-  access.authenticate(apiEvent, { role: "admin" });
-
+const listUserHandler = async (event) => {
   const users = new Users().getUsers();
-  const body = Object.entries(users).map(([name, user]) => {
-    return {
-      name: name,
-      role: user.role,
-      color: user.color,
-    };
-  });
-
   return {
     statusCode: 200,
-    body: JSON.stringify(body),
+    body: JSON.stringify(users),
   };
 };
 
-exports.handler = handlerHelper.apiHandler(listUsers);
+export const handler = middy()
+  .use(getMiddlewares({ jsonBody: false }))
+  .handler(listUserHandler);

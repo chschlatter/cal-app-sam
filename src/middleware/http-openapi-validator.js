@@ -1,28 +1,36 @@
 import { createError } from "@middy/util";
+import { context } from "esbuild";
 
 const defaults = {
   validatorModule: undefined,
+  stringFormats: {},
 };
 
 const httpOpenapiValidator = (opts = {}) => {
-  const { validatorModule } = { ...defaults, ...opts };
+  const options = { ...defaults, ...opts };
 
-  if (!validatorModule) {
+  if (!options.validatorModule) {
     throw new Error("validatorModule is required");
   }
-  const { validateRequest, RequestError, ValidationError } = validatorModule;
+  const { validateRequest, RequestError, ValidationError } =
+    options.validatorModule;
 
   return {
     before: async (request) => {
       const { event } = request;
 
-      const validationResult = validateRequest({
-        path: event.path,
-        method: event.httpMethod.toLowerCase(),
-        headers: event.headers,
-        query: event.queryStringParameters || {},
-        body: event.body === null ? undefined : event.body,
-      });
+      const validationResult = validateRequest(
+        {
+          path: event.path,
+          method: event.httpMethod.toLowerCase(),
+          headers: event.headers,
+          query: event.queryStringParameters || {},
+          body: event.body === null ? undefined : event.body,
+        },
+        {
+          stringFormats: options.stringFormats,
+        }
+      );
 
       if (validationResult instanceof RequestError) {
         if (validationResult instanceof ValidationError) {
@@ -50,6 +58,7 @@ const httpOpenapiValidator = (opts = {}) => {
           },
         });
       }
+      request.context.validationResult = validationResult;
     },
   };
 };

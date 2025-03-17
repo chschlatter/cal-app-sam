@@ -27,19 +27,24 @@ const getAuthToken = async (apiBaseURL, username, secret) => {
  * @returns {Promise<(path: string, options?: RequestInit) => Promise<Response>>}
  */
 const getApiCallFn = async () => {
-  const apiBaseURL = getEnv("TEST_API_BASE_URL");
+  const testApiBaseURL = getEnv("TEST_API_BASE_URL");
+  const apiBaseURL = getEnv("API_BASE_URL");
   const token = await getAuthToken(
-    apiBaseURL,
+    testApiBaseURL,
     getEnv("TEST_USERNAME"),
     getSecret("TEST_JWT_SECRET")
   );
   return async (path, options, debug = false) => {
-    const url = apiBaseURL + path;
+    const url = path.startsWith("http") ? path : apiBaseURL + path;
     const headers = {
       ...(options?.headers || {}),
       Cookie: token,
     };
     debug && console.log("API call:", url, options, headers);
+
+    if (options?.body) {
+      headers["Content-Type"] = "application/json";
+    }
 
     return await fetch(url, {
       ...options,
@@ -55,7 +60,8 @@ const getApiCallFn = async () => {
  * @returns {Promise<void>}
  */
 const clearDb = async (apiCallFn, year) => {
-  const response = await apiCallFn(`/api/test/events/${year}`, {
+  const url = getEnv("TEST_API_BASE_URL") + "/api/test/events/" + year;
+  const response = await apiCallFn(url, {
     method: "DELETE",
   });
   if (!response.ok) {
@@ -70,7 +76,8 @@ const clearDb = async (apiCallFn, year) => {
  * @returns {Promise<void>}
  */
 const populateDb = async (apiCallFn, events) => {
-  const response = await apiCallFn("/api/test/events", {
+  const url = getEnv("TEST_API_BASE_URL") + "/api/test/events";
+  const response = await apiCallFn(url, {
     method: "POST",
     body: JSON.stringify(events),
   });

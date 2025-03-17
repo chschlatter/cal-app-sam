@@ -36,7 +36,7 @@ describe("Update event - PUT /api/events/{id}", () => {
       method: "POST",
       body: JSON.stringify(event),
     });
-    assert.equal(response.status, 200);
+    assert.equal(response.status, 201);
     existingEvent = await response.json();
   });
 
@@ -165,7 +165,7 @@ describe("Update event - PUT /api/events/{id}", () => {
       method: "POST",
       body: JSON.stringify(event),
     });
-    assert.equal(response.status, 200);
+    assert.equal(response.status, 201);
     const newEvent = await response.json();
 
     const updatedEvent = {
@@ -198,7 +198,7 @@ describe("Update event - PUT /api/events/{id}", () => {
       method: "POST",
       body: JSON.stringify(event),
     });
-    assert.equal(response.status, 200);
+    assert.equal(response.status, 201);
     const newEvent = await response.json();
 
     const updatedEvent = {
@@ -231,7 +231,7 @@ describe("Update event - PUT /api/events/{id}", () => {
       method: "POST",
       body: JSON.stringify(event),
     });
-    assert.equal(response.status, 200);
+    assert.equal(response.status, 201);
     const newEvent = await response.json();
 
     const updatedEvent = {
@@ -268,8 +268,6 @@ describe("Update event - PUT /api/events/{id}", () => {
     assert.equal(response.status, 400);
   });
 
-  /* TODO: Add test for updating an event with invalid date format */
-  /*
   test("Update an event with invalid date format", async () => {
     const updatedEvent = {
       id: existingEvent.id,
@@ -284,7 +282,6 @@ describe("Update event - PUT /api/events/{id}", () => {
     });
     assert.equal(response.status, 400);
   });
-  */
 
   test("Update an event with invalid JSON", async () => {
     const updatedEvent = {
@@ -298,14 +295,14 @@ describe("Update event - PUT /api/events/{id}", () => {
       method: "PUT",
       body: "invalid JSON",
     });
-    assert.equal(response.status, 400);
+    assert.equal(response.status, 415);
   });
 
   test("Update an event with missing body", async () => {
     const response = await apiCall(`/api/events/${existingEvent.id}`, {
       method: "PUT",
     });
-    assert.equal(response.status, 400);
+    assert.equal(response.status, 415);
   });
 
   test("Update an event with missing id in path", async () => {

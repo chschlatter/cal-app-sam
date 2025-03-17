@@ -36,13 +36,20 @@ const maxDays = 90;
  */
 export class EventsError extends Error {
   /**
-   * @param {string} message
-   * @param {"start_end_required"|"end_before_start"|"event_not_found"|"event_overlaps"|"event_max_days"|"event_min_days"|"event_validation"|"event_updated"} errorCode
-   * @param {Object} [data]
-   * @param {boolean} [data.overlap_start]
-   * @param {boolean} [data.overlap_end]
-   * @param {number} [data.maxDays]
-   * @param {number} [data.minDays]
+   * @param {string} message - The error message
+   * @param {"start_end_required"|
+   *         "end_before_start"|
+   *         "event_not_found"|
+   *         "event_overlaps"|
+   *         "event_max_days"|
+   *         "event_min_days"|
+   *         "event_validation"|
+   *         "event_updated"} errorCode - The error code
+   * @param {Object} [data] - Additional data for the error
+   * @param {boolean} [data.overlap_start] - Indicates if there is an overlap at the start
+   * @param {boolean} [data.overlap_end] - Indicates if there is an overlap at the end
+   * @param {number} [data.maxDays] - The maximum number of days allowed
+   * @param {number} [data.minDays] - The minimum number of days required
    */
   constructor(message, errorCode, data = {}) {
     super(message);

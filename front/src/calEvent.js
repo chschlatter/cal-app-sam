@@ -43,7 +43,7 @@ export default (user, apiUrl) => ({
         window.App.eventModal.hide();
       })
       .catch((error) => {
-        this.errorMessage = error.message;
+        this.errorMessage = error.data.message;
         console.log(
           "deleteEvent(): [" + error.status + "] " + error.data.message
         );

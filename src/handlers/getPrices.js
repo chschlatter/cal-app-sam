@@ -1,21 +1,22 @@
 // @ts-check
 
-const handlerHelper = require("../handlerHelper");
 const prices = require("../../prices.json");
-const access = require("../accessControl");
+
+import middy from "@middy/core";
+import { getMiddlewares, createApiError } from "../common/middyDefaults.js";
 
 /**
  * AWS Lambda function handler to get prices from a JSON file
- * @param {handlerHelper.ApiEventParsed} apiEvent - HTTP request with body parsed
- * @returns {Promise<import("aws-lambda").APIGatewayProxyResult>} - AWS Lambda HTTP response
+ * @param {import('../common/middyDefaults.js').APIGatewayEventWithParsedBody} event
+ * @returns {Promise<import("aws-lambda").APIGatewayProxyResult>}
  */
-const getPrices = async (apiEvent) => {
-  access.authenticate(apiEvent);
-
+const getPricesHandler = async (event) => {
   return {
     statusCode: 200,
     body: JSON.stringify(prices),
   };
 };
 
-exports.handler = handlerHelper.apiHandler(getPrices);
+export const handler = middy()
+  .use(getMiddlewares({ jsonBody: false }))
+  .handler(getPricesHandler);

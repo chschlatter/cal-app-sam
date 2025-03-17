@@ -6,17 +6,9 @@ const {
   EventsError,
 } = require("../model/events.model-DynNoLock");
 const { UsersModel: Users } = require("../model/users.model");
-const { getSecret } = require("../secrets");
 
-import * as validatorModule from "../../build/validator";
 import middy from "@middy/core";
-import httpErrorHandler from "@middy/http-error-handler";
-import httpHeaderNormalizer from "@middy/http-header-normalizer";
-import httpErrorJsonFormatter, {
-  createApiError,
-} from "../middleware/http-error-json-formatter";
-import validator from "../middleware/http-openapi-validator";
-import jwtAuth from "../middleware/jwt-auth";
+import { getMiddlewares, createApiError } from "../common/middyDefaults.js";
 
 // init dynamodb during cold start, since we get more CPU
 const events = new EventsModelNoLock();
@@ -53,9 +45,5 @@ const listEventsHandler = async (event) => {
 };
 
 export const handler = middy()
-  .use(httpHeaderNormalizer())
-  .use(jwtAuth({ secret: getSecret("JWT_SECRET") }))
-  .use(validator({ validatorModule }))
-  .use(httpErrorJsonFormatter())
-  .use(httpErrorHandler({ fallbackMessage: "Internal server error" }))
+  .use(getMiddlewares({ jsonBody: false }))
   .handler(listEventsHandler);

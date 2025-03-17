@@ -1,31 +1,23 @@
 // @ts-check
 
-const handlerHelper = require("../handlerHelper");
-const createError = require("http-errors");
-const access = require("../accessControl");
-const i18n = require("../i18n");
+import middy from "@middy/core";
+import { getMiddlewares, createApiError } from "../common/middyDefaults.js";
 
 /**
  * AWS Lambda function handler to authenticate a user
- * @param {handlerHelper.ApiEventParsed} apiEvent - HTTP request with body parsed
- * @returns {Promise<import("aws-lambda").APIGatewayProxyResult>} - AWS Lambda HTTP response
+ * @param {import('../common/middyDefaults.js').APIGatewayEventWithParsedBody} event
+ * @returns {Promise<import("aws-lambda").APIGatewayProxyResult>}
  */
-const auth = async (apiEvent) => {
-  if (apiEvent.httpMethod !== "GET") {
-    throw new createError.BadRequest(
-      i18n.t("error.wrongMethod", { handler: "auth.handler", method: "GET" })
-    );
-  }
-
-  const user = access.authenticate(apiEvent);
-
+const authHandler = async (event, context) => {
   return {
     statusCode: 200,
     body: JSON.stringify({
-      name: user.name,
-      role: user.role,
+      name: context.user.name,
+      role: context.user.role,
     }),
   };
 };
 
-exports.handler = handlerHelper.apiHandler(auth);
+export const handler = middy()
+  .use(getMiddlewares({ jsonBody: false }))
+  .handler(authHandler);

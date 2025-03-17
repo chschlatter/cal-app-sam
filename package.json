@@ -11,6 +11,8 @@
     "@middy/core": "^6.0.0",
     "@middy/http-error-handler": "^6.0.0",
     "@middy/http-header-normalizer": "^6.1.3",
+    "@middy/http-json-body-parser": "^6.1.3",
+    "@middy/http-router": "^6.1.4",
     "@middy/util": "^6.1.1",
     "alpinejs": "^3.13.3",
     "bootstrap": "^5.3.2",
@@ -28,7 +30,7 @@
   "scripts": {
     "build": "./compile_openapi_validator.sh && sam build",
     "deploy": "sam deploy",
-    "build-prod": "sam build --config-env prod",
+    "build-prod": "./compile_openapi_validator.sh && sam build --config-env prod",
     "deploy-prod": "sam deploy --config-env prod",
     "front-build-prod": "webpack --mode production",
     "front-build": "webpack --mode development",

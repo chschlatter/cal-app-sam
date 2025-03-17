@@ -27,6 +27,7 @@ fetch(`${window.App.apiUrl}/auth`)
     window.App.user = user;
 
     // warmup api
+    /*
     const warmupPromise = Promise.all([
       fetch(`${window.App.apiUrl}/events?warmup=true`, { method: "post" }),
       fetch(`${window.App.apiUrl}/events/XXX?warmup=true`, { method: "put" }),
@@ -41,6 +42,7 @@ fetch(`${window.App.apiUrl}/auth`)
       .catch((error) => {
         console.log("warmup: " + error.message);
       });
+    */
 
     document.querySelector("html").style.visibility = "visible";
 

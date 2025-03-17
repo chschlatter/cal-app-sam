@@ -44,7 +44,7 @@ describe("Create event - POST /api/events", () => {
       method: "POST",
       body: JSON.stringify(event),
     });
-    assert.equal(response.status, 200);
+    assert.equal(response.status, 201);
     const body = await response.json();
     assert.equal(body.title, event.title);
     assert.equal(body.start, event.start);
@@ -102,6 +102,9 @@ describe("Create event - POST /api/events", () => {
       body: JSON.stringify(event),
     });
     assert.equal(response.status, 400);
+    const body = await response.json();
+    assert.deepEqual(body.details.path, ["body", "end"]);
+    assert.equal(body.details.error, "Invalid date");
   });
 
   test("Create an event with invalid title", async () => {
