@@ -1,22 +1,32 @@
-// @ts-check
-
-const {
+import {
   GetCommand,
   QueryCommand,
   TransactWriteCommand,
-} = require("@aws-sdk/lib-dynamodb");
-const { v4: uuidv4 } = require("uuid");
-const dayjs = require("dayjs");
-const { UsersModel: Users } = require("./users.model");
-const { initDB } = require("../db2");
-const i18n = require("../i18n");
-const { getEnv } = require("../secrets");
+} from "@aws-sdk/lib-dynamodb";
+import { TransactionCanceledException } from "@aws-sdk/client-dynamodb";
+
+import { v4 as uuidv4 } from "uuid";
+import dayjs from "dayjs";
+import { initDB } from "../db2";
+import { getEnv } from "../secrets";
+import { UsersModel as Users } from "./users.model";
+import i18n from "../i18n";
 
 const maxDays = 90;
 
 /**
  * @typedef {import("../db2").DB} DB
  */
+
+export interface Event {
+  id: string;
+  title: string;
+  start: string;
+  end: string;
+  type?: string;
+  color?: string;
+  version?: number;
+}
 
 /**
  * @typedef {Object} Event
@@ -29,29 +39,49 @@ const maxDays = 90;
  * @property {number} [version]
  */
 
+type EventsErrorCode =
+  | "start_end_required"
+  | "end_before_start"
+  | "event_not_found"
+  | "event_overlaps"
+  | "event_max_days"
+  | "event_min_days"
+  | "event_validation"
+  | "event_updated";
+
+interface EventsErrorData {
+  overlap_start?: boolean;
+  overlap_end?: boolean;
+  maxDays?: number;
+  minDays?: number;
+}
+
 /**
  * @class EventsError
  * @classdesc Custom error class for events
+ * @property {string} code - The error code
+ * @property {Object} data - Additional data for the error
  * @extends {Error}
  */
 export class EventsError extends Error {
   /**
    * @param {string} message - The error message
-   * @param {"start_end_required"|
-   *         "end_before_start"|
-   *         "event_not_found"|
-   *         "event_overlaps"|
-   *         "event_max_days"|
-   *         "event_min_days"|
-   *         "event_validation"|
-   *         "event_updated"} errorCode - The error code
+   * @param {EventsErrorCode} errorCode - The error code
    * @param {Object} [data] - Additional data for the error
    * @param {boolean} [data.overlap_start] - Indicates if there is an overlap at the start
    * @param {boolean} [data.overlap_end] - Indicates if there is an overlap at the end
    * @param {number} [data.maxDays] - The maximum number of days allowed
    * @param {number} [data.minDays] - The minimum number of days required
    */
-  constructor(message, errorCode, data = {}) {
+
+  code: EventsErrorCode;
+  data: EventsErrorData;
+
+  constructor(
+    message: string,
+    errorCode: EventsErrorCode,
+    data: EventsErrorData = {}
+  ) {
     super(message);
     this.code = errorCode;
     this.data = data;
@@ -80,7 +110,7 @@ export class EventsModelNoLock {
    * @returns {Promise<Array<Event>>} - A promise that resolves to an array of event objects.
    * @throws {createError.BadRequest} - If start or end query params are missing.
    */
-  async list(start, end) {
+  async list(start: string, end: string): Promise<Array<Event>> {
     if (!start || !end) {
       throw new EventsError(
         "start and end params are required",
@@ -117,23 +147,21 @@ export class EventsModelNoLock {
       return [];
     }
 
-    return data.Items.map(
-      /** @param {Record<string, any>} item */ (item) => {
-        const { startDate: start, endDate: end, SK: id, title, ...rest } = item;
-        // validate event data
-        if (!id || !title || !start || !end) {
-          throw new EventsError("Event data is invalid", "event_validation");
-        }
-        /** @type {Event} */ const event = {
-          id,
-          title,
-          start,
-          end,
-          ...rest,
-        };
-        return event;
+    return data.Items.map((item: Record<string, any>) => {
+      const { startDate: start, endDate: end, SK: id, title, ...rest } = item;
+      // validate event data
+      if (!id || !title || !start || !end) {
+        throw new EventsError("Event data is invalid", "event_validation");
       }
-    );
+      /** @type {Event} */ const event = {
+        id,
+        title,
+        start,
+        end,
+        ...rest,
+      };
+      return event;
+    });
   }
 
   /**
@@ -144,7 +172,7 @@ export class EventsModelNoLock {
    * @throws {EventsError} - If event overlaps with another
    * @throws {Error} - If DynamoDB operation fails
    */
-  async create(event) {
+  async create(event: Event): Promise<Event> {
     this.#validateEvent(event);
 
     event.id = uuidv4();
@@ -166,7 +194,7 @@ export class EventsModelNoLock {
 
     // for each night of the event, create reservation slot item
     // with PK = 'SLOT', SK = date, eventId = event.id
-    const slotPutInputOps = [];
+    const slotPutInputOps: object[] = [];
     this.#getSlotDates(event.start, event.end).forEach((date) => {
       slotPutInputOps.push({
         Put: {
@@ -182,7 +210,7 @@ export class EventsModelNoLock {
     });
 
     try {
-      const result = await (
+      await (
         await this.#db.client
       ).send(
         new TransactWriteCommand({
@@ -190,29 +218,33 @@ export class EventsModelNoLock {
         })
       );
       return event;
-    } catch (error) {
-      if (error.name === "TransactionCanceledException") {
+    } catch (error: unknown) {
+      if (
+        error instanceof TransactionCanceledException &&
+        error.CancellationReasons
+      ) {
         const [eventItemReason, ...slotItemsReasons] =
           error.CancellationReasons;
 
         if (eventItemReason.Code !== "None") {
           throw new Error(
-            "Transaction was canceled. Reasons: " +
-              JSON.stringify(error.CancellationReasons)
+            "Transaction was canceled. Put event item failed. Reason: " +
+              JSON.stringify(eventItemReason)
           );
         }
 
         const hasConflict = slotItemsReasons.some((reason) => {
-          if (
-            reason.Code !== "ConditionalCheckFailed" &&
-            reason.Code !== "None"
-          ) {
-            throw new Error(
-              "Transaction was canceled. Reasons: " +
-                JSON.stringify(error.CancellationReasons)
-            );
+          switch (reason.Code) {
+            case "ConditionalCheckFailed":
+              return true;
+            case "None":
+              return false;
+            default:
+              throw new Error(
+                "Transaction was canceled. Put slot item failed. Reason: " +
+                  JSON.stringify(reason)
+              );
           }
-          return reason.Code === "ConditionalCheckFailed";
         });
 
         if (hasConflict) {
@@ -233,7 +265,7 @@ export class EventsModelNoLock {
    * @throws {EventException} - If event duration is greater than maxDays
    * @throws {Error} - If DynamoDB operation fails
    */
-  async batchCreate(events) {
+  async batchCreate(events: Event[]): Promise<Event[]> {
     for (const event of events) {
       await this.create(event);
     }
@@ -250,7 +282,7 @@ export class EventsModelNoLock {
    * @throws {EventsError} - If event was updated by another user
    * @throws {Error} - If DynamoDB operation fails
    */
-  async update(eventFromDb, event) {
+  async update(eventFromDb: Event, event: Event): Promise<Event> {
     this.#validateEvent(event);
 
     const slotDatesFromDb = this.#getSlotDates(
@@ -265,7 +297,7 @@ export class EventsModelNoLock {
       (date) => !slotDates.has(date)
     );
 
-    const txOps = [];
+    const txOps: object[] = [];
 
     const updateInputOp = {
       Update: {
@@ -322,27 +354,39 @@ export class EventsModelNoLock {
     const txCmd = new TransactWriteCommand({ TransactItems: txOps });
     try {
       await (await this.#db.client).send(txCmd);
-    } catch (error) {
-      if (error.name === "TransactionCanceledException") {
+    } catch (error: unknown) {
+      if (
+        error instanceof TransactionCanceledException &&
+        error.CancellationReasons
+      ) {
         const [updateInputOpReason, ...slotItemsReasons] =
           error.CancellationReasons;
-        if (updateInputOpReason.Code === "ConditionalCheckFailed") {
-          throw new EventsError(
-            "Event was updated by another user",
-            "event_updated"
-          );
-        }
-        const hasConflict = slotItemsReasons.some((reason) => {
-          if (
-            reason.Code !== "ConditionalCheckFailed" &&
-            reason.Code !== "None"
-          ) {
-            throw new Error(
-              "Transaction was canceled. Reasons: " +
-                JSON.stringify(error.CancellationReasons)
+
+        if (updateInputOpReason.Code !== "None") {
+          if (updateInputOpReason.Code === "ConditionalCheckFailed") {
+            throw new EventsError(
+              "Event was updated by another user",
+              "event_updated"
             );
           }
-          return reason.Code === "ConditionalCheckFailed";
+          throw new Error(
+            "Transaction was canceled. Update event item failed. Reason: " +
+              JSON.stringify(updateInputOpReason)
+          );
+        }
+
+        const hasConflict = slotItemsReasons.some((reason) => {
+          switch (reason.Code) {
+            case "ConditionalCheckFailed":
+              return true;
+            case "None":
+              return false;
+            default:
+              throw new Error(
+                "Transaction was canceled. Put slot item failed. Reason: " +
+                  JSON.stringify(reason)
+              );
+          }
         });
         if (hasConflict) {
           throw new EventsError(
@@ -364,7 +408,7 @@ export class EventsModelNoLock {
    * @throws {createError.NotFound} - If event not found
    * @throws {Error} - If DynamoDB operation fails
    */
-  async get(eventId) {
+  async get(eventId: string): Promise<Event> {
     const getDbOpParams = {
       TableName: this.#db.tableName,
       Key: {
@@ -395,7 +439,7 @@ export class EventsModelNoLock {
    * @throws {Error} - If DynamoDB operation fails
    * @returns {Promise<void>}
    */
-  async remove(event) {
+  async remove(event: Event): Promise<void> {
     const deleteDbOp = {
       Delete: {
         TableName: this.#db.tableName,
@@ -410,7 +454,7 @@ export class EventsModelNoLock {
       },
     };
 
-    const deleteSlotOps = [];
+    const deleteSlotOps: object[] = [];
     for (
       let date = dayjs(event.start);
       date.isBefore(dayjs(event.end).add(-1, "day"));
@@ -432,19 +476,22 @@ export class EventsModelNoLock {
     try {
       await (await this.#db.client).send(txCmd);
     } catch (error) {
-      if (error.name === "TransactionCanceledException") {
-        const deleteDbOpReason = error.CancellationReasons[0];
+      if (
+        error instanceof TransactionCanceledException &&
+        error.CancellationReasons
+      ) {
+        const [deleteDbOpReason, ...slotItemsReasons] =
+          error.CancellationReasons;
         if (deleteDbOpReason.Code === "ConditionalCheckFailed") {
           throw new EventsError(
             "Event was updated by another user",
             "event_updated"
           );
-        } else {
-          throw new Error(
-            "Transaction was canceled. Reasons: " +
-              JSON.stringify(error.CancellationReasons)
-          );
         }
+        throw new Error(
+          "Transaction was canceled. Reasons: " +
+            JSON.stringify(error.CancellationReasons)
+        );
       }
       throw error;
     }
@@ -455,7 +502,7 @@ export class EventsModelNoLock {
    * @param {string} year - The year to delete events for.
    * @returns {Promise<void>} - A promise that resolves when the events are deleted.
    */
-  async deleteEventsByYear(year) {
+  async deleteEventsByYear(year: string): Promise<void> {
     const start = dayjs(year + "-01-01").toISOString();
     const end = dayjs(year + "-12-31").toISOString();
     const events = await this.list(start, end);
@@ -470,8 +517,8 @@ export class EventsModelNoLock {
    * @param {string} end - end date, in format 'YYYY-MM-DD'
    * @returns {Set<string>} - set of dates
    */
-  #getSlotDates(start, end) {
-    const slotDates = new Set();
+  #getSlotDates(start: string, end: string): Set<string> {
+    const slotDates: Set<string> = new Set();
     for (
       let date = dayjs(start);
       date.isBefore(dayjs(end).add(-1, "day"));
@@ -488,7 +535,7 @@ export class EventsModelNoLock {
    * @throws {EventsError} - If event data is invalid
    * @returns {void}
    */
-  #validateEvent(event) {
+  #validateEvent(event: Event): void {
     if (!event.title || !event.start || !event.end) {
       throw new EventsError(
         "error.eventStartEndRequired",

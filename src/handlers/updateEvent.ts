@@ -1,16 +1,18 @@
-// @ts-check
-
-const i18n = require("../i18n");
-const { HttpError } = require("../common/httpError");
-const { UsersModel: Users } = require("../model/users.model");
-const { createLambdaHandler } = require("../common/lambdaHandler");
-const {
+import i18n from "../i18n";
+import { UsersModel as Users } from "../model/users.model";
+import {
   EventsModelNoLock,
   EventsError,
-} = require("../model/events.model-DynNoLock");
+} from "../model/events.model-DynNoLock";
+import { type Event } from "../model/events.model-DynNoLock";
+import {
+  type APIGatewayEventWithParsedBody,
+  type ContextWithUser,
+} from "../common/middyDefaults.js";
 
 import middy from "@middy/core";
 import { getMiddlewares, createApiError } from "../common/middyDefaults.js";
+import type { APIGatewayProxyResult } from "aws-lambda";
 
 // init dynamodb during cold start, since we get more CPU
 const events = new EventsModelNoLock();
@@ -20,7 +22,10 @@ const events = new EventsModelNoLock();
  * @param {import('../common/middyDefaults.js').APIGatewayEventWithParsedBody} event
  * @returns {Promise<import("aws-lambda").APIGatewayProxyResult>}
  */
-const updateEventHandler = async (event, context) => {
+const updateEventHandler = async (
+  event: APIGatewayEventWithParsedBody,
+  context: ContextWithUser
+) => {
   const eventId = context.validationResult.params["id"];
   try {
     const eventFromDb = await events.get(eventId);
@@ -28,6 +33,11 @@ const updateEventHandler = async (event, context) => {
     if (event.body.id !== eventId) {
       throw createApiError(400, i18n.t("error.idMismatch"));
     }
+
+    const updatedEvent: Event = {
+      id: eventId,
+      ...event.body,
+    } as Event;
 
     // authorize user
     if (context.user.role !== "admin") {
@@ -39,11 +49,13 @@ const updateEventHandler = async (event, context) => {
       }
     }
 
-    const updatedEvent = await events.update(eventFromDb, event.body);
-    updatedEvent.color = new Users().getUserColor(updatedEvent.title);
+    const updatedEventFromDb = await events.update(eventFromDb, updatedEvent);
+    updatedEventFromDb.color = new Users().getUserColor(
+      updatedEventFromDb.title
+    );
     return {
       statusCode: 200,
-      body: JSON.stringify(updatedEvent),
+      body: JSON.stringify(updatedEventFromDb),
     };
   } catch (err) {
     if (err instanceof EventsError) {
@@ -81,6 +93,11 @@ const updateEventHandler = async (event, context) => {
   }
 };
 
-export const handler = middy()
+export const handler = middy<
+  APIGatewayEventWithParsedBody,
+  APIGatewayProxyResult,
+  Error,
+  ContextWithUser
+>()
   .use(getMiddlewares())
   .handler(updateEventHandler);

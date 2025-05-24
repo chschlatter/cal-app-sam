@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "target": "ES2020",
+    "skipLibCheck": true,
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "module": "ES2020"
+    // "typeRoots": ["node_modules/@types", "node_modules"]
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules"]
+}

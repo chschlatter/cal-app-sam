@@ -1,23 +1,43 @@
-// @ts-check
-
-const i18n = require("../i18n");
-const {
+import i18n from "../i18n";
+import {
   EventsModelNoLock,
   EventsError,
-} = require("../model/events.model-DynNoLock");
+} from "../model/events.model-DynNoLock";
+import {
+  type APIGatewayEventWithParsedBody,
+  type ContextWithUser,
+} from "../common/middyDefaults.js";
 
 import middy from "@middy/core";
 import { getMiddlewares, createApiError } from "../common/middyDefaults.js";
+import type { APIGatewayProxyResult } from "aws-lambda";
+import httpOpenapiValidator from "../middleware/http-openapi-validator.js";
+import jwtAuth from "../middleware/jwt-auth.js";
+import { getSecret } from "../secrets.js";
 
 // init dynamodb during cold start, since we get more CPU
 const events = new EventsModelNoLock();
 
-/**
- * Lambda function handler to delete an event in a DynamoDB table
- * @param {import("aws-lambda").APIGatewayEvent} event
- * @returns {Promise<import("aws-lambda").APIGatewayProxyResult>}
- */
-const deleteEventHandler = async (event, context) => {
+const middlewares = middy<
+  APIGatewayEventWithParsedBody,
+  APIGatewayProxyResult
+>()
+  // .use(getMiddlewares({ jsonBody: false }))
+  .use(
+    jwtAuth({
+      secret: getSecret("JWT_SECRET"),
+      setToContext: true,
+    })
+  )
+  .use(
+    httpOpenapiValidator({
+      validatorModule: undefined,
+      stringFormats: {},
+      setToContext: true,
+    })
+  );
+
+export const handler = middlewares.handler(async (_event, context) => {
   try {
     const eventFromDb = await events.get(context.validationResult.params["id"]);
 
@@ -46,8 +66,4 @@ const deleteEventHandler = async (event, context) => {
     statusCode: 200,
     body: JSON.stringify({ message: "Event deleted" }),
   };
-};
-
-export const handler = middy()
-  .use(getMiddlewares({ jsonBody: false }))
-  .handler(deleteEventHandler);
+});

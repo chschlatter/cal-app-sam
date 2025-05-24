@@ -1,11 +1,8 @@
-// @ts-check
-
-const { UsersModel: Users } = require("../model/users.model");
-const { createSessionCookie } = require("../cookieAuth");
-const { getSecret } = require("../secrets");
-const i18n = require("../i18n");
-
-const { OAuth2Client } = require("google-auth-library");
+import { UsersModel as Users } from "../model/users.model";
+import { createSessionCookie } from "../cookieAuth";
+import { getSecret } from "../secrets";
+import i18n from "../i18n";
+import { OAuth2Client } from "google-auth-library";
 const authClient = new OAuth2Client();
 
 import middy from "@middy/core";

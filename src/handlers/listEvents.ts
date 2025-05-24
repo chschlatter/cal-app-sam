@@ -1,10 +1,11 @@
-// @ts-check
+import { type APIGatewayEvent } from "aws-lambda";
 
 const i18n = require("../i18n");
-const {
+import {
   EventsModelNoLock,
   EventsError,
-} = require("../model/events.model-DynNoLock");
+} from "../model/events.model-DynNoLock";
+
 const { UsersModel: Users } = require("../model/users.model");
 
 import middy from "@middy/core";
@@ -15,13 +16,13 @@ const events = new EventsModelNoLock();
 
 /**
  * Lambda function handler to list events
- * @param {import("aws-lambda").APIGatewayEvent} event
+ * @param {APIGatewayEvent} event
  * @returns {Promise<import("aws-lambda").APIGatewayProxyResult>}
  */
-const listEventsHandler = async (event) => {
+const listEventsHandler = async (event: APIGatewayEvent) => {
   const { start: startDate, end: endDate } = event.queryStringParameters || {};
   try {
-    const result = await events.list(startDate, endDate);
+    const result = await events.list(startDate!, endDate!);
     return {
       statusCode: 200,
       body: JSON.stringify(
