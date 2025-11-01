@@ -10,7 +10,7 @@ const { UsersModel: Users } = require("../model/users.model");
  * @returns {Promise<import("aws-lambda").APIGatewayProxyResult>} - AWS Lambda HTTP response
  */
 const listUsers = async (apiEvent) => {
-  access.authenticate(apiEvent, { role: "admin" });
+  await access.authenticate(apiEvent, { role: "admin" });
 
   const users = new Users().getUsers();
   const body = Object.entries(users).map(([name, user]) => {

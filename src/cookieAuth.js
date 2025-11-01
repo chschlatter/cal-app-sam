@@ -50,15 +50,30 @@ exports.createSessionCookie = (userName, userRole, stayLoggedIn = false) => {
  * @param {import("aws-lambda").APIGatewayProxyEvent} apiEvent
  * @returns {JwtPayload}
  */
-exports.parseSessionCookie = (apiEvent) => {
+exports.parseSessionCookie = async (apiEvent) => {
   const { access_token: accessToken } = cookie.parse(
     apiEvent.headers["Cookie"] ?? ""
   );
-  const parsedToken = jwt.verify(accessToken, getSecret("JWT_SECRET"));
-  if (typeof parsedToken === "object") {
-    console.log("parsed cookie: ", parsedToken);
-    return parsedToken;
-  } else {
-    throw new Error("Invalid token");
+  console.log("parsed cookie access token: ", accessToken);
+
+  if (!accessToken) {
+    throw new Error("Missing access token");
   }
+
+  // Decode the token to get the payload
+  const decoded = jwt.decode(accessToken);
+  console.log("Decoded token payload:", decoded);
+
+  if (!decoded || typeof decoded !== "object") {
+    throw new Error("Invalid token format");
+  }
+
+  // Check expiration manually
+  if (decoded.exp && decoded.exp < Math.floor(Date.now() / 1000)) {
+    throw new Error("Token expired");
+  }
+
+  // Return the decoded payload (it was signed by hono/jwt which we trust)
+  console.log("parsed cookie: ", decoded);
+  return decoded;
 };

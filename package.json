@@ -4,26 +4,29 @@
   "version": "0.0.1",
   "private": true,
   "dependencies": {
+    "@aws-sdk/client-lambda": "^3.918.0",
     "@fullcalendar/bootstrap5": "^6.1.10",
     "@fullcalendar/core": "^6.1.10",
     "@fullcalendar/daygrid": "^6.1.10",
     "@fullcalendar/interaction": "^6.1.10",
     "alpinejs": "^3.13.3",
     "bootstrap": "^5.3.2",
-    "cookie": "^0.6.0",
+    "cookie": "^1.0.2",
     "dayjs": "^1.11.10",
-    "esbuild": "^0.19.8",
+    "esbuild": "^0.25.11",
     "google-auth-library": "^9.6.3",
+    "hono": "^4.7.10",
     "http-errors": "^2.0.0",
     "jsonwebtoken": "^9.0.2",
     "lesslog": "^1.0.2",
     "node-polyglot": "^2.5.0",
-    "uuid": "^9.0.1"
+    "uuid": "^11.1.0",
+    "validator": "^13.15.15"
   },
   "scripts": {
-    "build": "sam build",
+    "build": "./compile_openapi_validator.sh && sam build",
     "deploy": "sam deploy",
-    "build-prod": "sam build --config-env prod",
+    "build-prod": "./compile_openapi_validator.sh && sam build --config-env prod",
     "deploy-prod": "sam deploy --config-env prod",
     "front-build-prod": "webpack --mode production",
     "front-build": "webpack --mode development",
@@ -34,8 +37,10 @@
     "@aws-sdk/lib-dynamodb": "^3.511.0",
     "@aws-sdk/lib-storage": "^3.731.1",
     "@types/aws-lambda": "^8.10.138",
+    "@types/validator": "^13.15.1",
     "dotenv": "^16.4.5",
+    "openapi-static-validator": "^1.5.0",
     "webpack": "^5.89.0",
-    "webpack-cli": "^5.1.4"
+    "webpack-cli": "^6.0.1"
   }
 }

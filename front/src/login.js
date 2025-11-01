@@ -9,7 +9,7 @@ Alpine.store("username", {
 });
 
 window.Alpine = Alpine;
-window.App = { apiUrl: "/api" };
+window.App = { apiUrl: "/api2" };
 
 // see if DOM is already available
 if (

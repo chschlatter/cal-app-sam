@@ -8,7 +8,7 @@ Transform:
 Globals:
   Function:
     Timeout: 100
-    Runtime: nodejs18.x
+    Runtime: nodejs22.x
     MemorySize: 1024
     Architectures:
       - x86_64
@@ -44,6 +44,15 @@ Conditions:
     - test
 
 Resources:
+  LlrtLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      ContentUri: ./llrt-lambda-x64.zip
+      CompatibleRuntimes:
+        - provided.al2023
+      CompatibleArchitectures:
+        - x86_64
+
   # DynamoDB table to store events with LSI for start-date
   DbEventsNoLockTable:
     Type: AWS::DynamoDB::Table
@@ -72,6 +81,41 @@ Resources:
           Projection:
             ProjectionType: ALL
       BillingMode: PAY_PER_REQUEST
+
+  calApi:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/calApi.handler
+      Description: API Gateway for the calendar app
+      Runtime: provided.al2023
+      Layers:
+        - !Ref LlrtLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref EventsNoLockTable
+        - LambdaInvokePolicy:
+            FunctionName: !Ref verifyGoogleToken
+      Environment:
+        Variables:
+          EVENTS_TABLE: !Ref EventsNoLockTable
+          GOOGLE_CLIENT_ID: "{{resolve:ssm:/cal-app-sam/GOOGLE_CLIENT_ID}}"
+          VERIFY_GOOGLE_TOKEN_FUNCTION: !Ref verifyGoogleToken
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /api2/{proxy+}
+            Method: ANY
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        External: ["@aws-sdk"]
+        Minify: false
+        Target: "es2023"
+        SourceMap: false
+        Format: esm
+        OutExtension:
+          - .js=.mjs
 
   # This is a Lambda function config associated with the source code: listEvents.handler.js
   listEvents:
@@ -210,6 +254,20 @@ Resources:
           Properties:
             Path: /api/login
             Method: POST
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        External: ["@aws-sdk"]
+
+  # Lambda function to verify Google OAuth tokens (uses standard Node.js runtime)
+  verifyGoogleToken:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/verifyGoogleToken.handler
+      Description: Verify Google OAuth ID tokens using google-auth-library
+      Runtime: nodejs22.x
+      Timeout: 10
+      MemorySize: 256
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -414,6 +472,25 @@ Resources:
               FunctionARN: !GetAtt RewriteLoginFunction.FunctionMetadata.FunctionARN
         CacheBehaviors:
           - PathPattern: /api/*
+            # [HEAD, DELETE, POST, GET, OPTIONS, PUT, PATCH]
+            AllowedMethods:
+              - HEAD
+              - DELETE
+              - POST
+              - GET
+              - OPTIONS
+              - PUT
+              - PATCH
+            TargetOriginId: ApiGatewayOrigin
+            ForwardedValues:
+              QueryString: true
+            ViewerProtocolPolicy: redirect-to-https
+            # managed cache policy CachingDisabled
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            # managed origin request policy AllViewerExceptHostHeader
+            # see https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/using-managed-origin-request-policies.html#managed-origin-request-policy-all-viewer-except-host-header
+            OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
+          - PathPattern: /api2/*
             # [HEAD, DELETE, POST, GET, OPTIONS, PUT, PATCH]
             AllowedMethods:
               - HEAD

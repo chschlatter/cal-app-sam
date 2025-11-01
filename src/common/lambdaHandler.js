@@ -47,7 +47,7 @@ const createLambdaHandler = (handler, options = {}) => {
       );
 
       const request = {}; /* @type {Request} */
-      request.user = authenticateRequest(event);
+      request.user = await authenticateRequest(event);
       log.debug(`User ${request.user.name} authenticated`);
 
       if (options.validate) {

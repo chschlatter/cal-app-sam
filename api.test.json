@@ -1,0 +1,125 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Calendar API",
+    "version": "1.0",
+    "description": "API for testing the calendar application"
+  },
+  "paths": {
+    "/api/test/auth": {
+      "get": {
+        "responses": { "200": { "description": "Test authentication" } },
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${test.Arn}/invocations"
+          },
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        }
+      }
+    },
+    "/api/test/events": {
+      "post": {
+        "responses": { "200": { "description": "Test events" } },
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${test.Arn}/invocations"
+          },
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        }
+      }
+    },
+    "/api/test/events/{year}": {
+      "delete": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "year",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": { "200": { "description": "Test events" } },
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${test.Arn}/invocations"
+          },
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CreateEventParams": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20
+          },
+          "start": {
+            "type": "string",
+            "format": "date"
+          },
+          "end": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        "required": ["title", "start", "end"]
+      },
+      "Event": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "start": { "type": "string", "format": "date" },
+          "end": { "type": "string", "format": "date" },
+          "color": { "type": "string" }
+        },
+        "required": ["id", "title", "start", "end"]
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "role": { "type": "string", "enum": ["admin", "user"] },
+          "color": { "type": "string" },
+          "googleId": { "type": "string" }
+        },
+        "required": ["name", "role"]
+      },
+      "LoginParams": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "stayLoggedIn": { "type": "boolean" },
+          "gooleAuthJWT": { "type": "string" }
+        },
+        "required": ["name"]
+      }
+    },
+    "securitySchemes": {
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "access_token"
+      },
+      "apiKeyAuth": { "type": "apiKey", "in": "header", "name": "x-api-token" }
+    }
+  },
+  "x-amazon-apigateway-request-validators": {
+    "ValidateBody": {
+      "validateRequestParameters": false,
+      "validateRequestBody": true
+    },
+    "ValidateParameters": {
+      "validateRequestParameters": true,
+      "validateRequestBody": false
+    }
+  }
+}

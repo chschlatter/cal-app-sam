@@ -7,7 +7,7 @@ Alpine.data("calEvent", calEvent);
 window.Alpine = Alpine;
 
 window.App = {};
-window.App.apiUrl = "/api";
+window.App.apiUrl = "/api2";
 
 /*
  * redirect to login page if not authenticated

@@ -10,7 +10,7 @@ const access = require("../accessControl");
  * @returns {Promise<import("aws-lambda").APIGatewayProxyResult>} - AWS Lambda HTTP response
  */
 const getPrices = async (apiEvent) => {
-  access.authenticate(apiEvent);
+  await access.authenticate(apiEvent);
 
   return {
     statusCode: 200,

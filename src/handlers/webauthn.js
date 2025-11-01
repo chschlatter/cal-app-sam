@@ -45,7 +45,7 @@ const registerHandler = async (event) => {
 
 const getRegisterHandler = async (event) => {
   // only authenticated admins can register their tokens
-  const { name: userName } = access.authenticate(event, {
+  const { name: userName } = await access.authenticate(event, {
     role: "admin",
   });
 

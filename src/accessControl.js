@@ -25,12 +25,12 @@ class AccessError extends Error {
  * @param {Object} options - Options
  * @param {string} [options.role] - Role to check
  * @param {string} [options.name] - Name to check
- * @returns {cookieAuth.JwtPayload} - User object
+ * @returns {Promise<cookieAuth.JwtPayload>} - User object
  */
-const authenticate = (apiEvent, options = {}) => {
+const authenticate = async (apiEvent, options = {}) => {
   try {
     const users = new Users();
-    const accessTokenParsed = cookieAuth.parseSessionCookie(apiEvent);
+    const accessTokenParsed = await cookieAuth.parseSessionCookie(apiEvent);
     // check if user exists
     if (!users.getUser(accessTokenParsed.name)) {
       throw new Error("User not found");

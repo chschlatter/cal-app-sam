@@ -17,7 +17,7 @@ const auth = async (apiEvent) => {
     );
   }
 
-  const user = access.authenticate(apiEvent);
+  const user = await access.authenticate(apiEvent);
 
   return {
     statusCode: 200,

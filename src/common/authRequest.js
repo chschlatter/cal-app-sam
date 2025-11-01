@@ -9,11 +9,11 @@ const { JsonWebTokenError } = require("jsonwebtoken");
 /**
  * Authenticate the request
  * @param {import("aws-lambda").APIGatewayProxyEvent} event - HTTP request
- * @returns {import("../model/users.model").User} - user
+ * @returns {Promise<import("../model/users.model").User>} - user
  */
-export const authenticateRequest = (event) => {
+export const authenticateRequest = async (event) => {
   try {
-    const accessTokenParsed = cookieAuth.parseSessionCookie(event);
+    const accessTokenParsed = await cookieAuth.parseSessionCookie(event);
     const users = new Users();
     const user = users.getUser(accessTokenParsed.name);
     if (!user) {

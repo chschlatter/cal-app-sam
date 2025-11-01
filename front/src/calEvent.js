@@ -5,8 +5,6 @@ export default (user, apiUrl) => ({
   event: {},
   isLoading: false,
   errorMessage: "",
-  overlap_start: false,
-  overlap_end: false,
   userOptions: [],
 
   init() {
@@ -68,8 +66,6 @@ export default (user, apiUrl) => ({
 
       api(`${apiUrl}/events`, "post", newEvent)
         .then((event) => {
-          this.overlap_start = false;
-          this.overlap_end = false;
           // second param TRUE selects first event source,
           // without this, we get duplicated events with refetchEvents()
           // see https://fullcalendar.io/docs/Calendar-addEvent
@@ -77,11 +73,7 @@ export default (user, apiUrl) => ({
           window.App.eventModal.hide();
         })
         .catch((error) => {
-          ({
-            message: this.errorMessage,
-            overlap_start: this.overlap_start,
-            overlap_end: this.overlap_end,
-          } = handleApiError(error, "createEvent"));
+          this.errorMessage = handleApiError(error, "createEvent");
         })
         .finally(() => {
           this.isLoading = false;
@@ -119,11 +111,7 @@ export default (user, apiUrl) => ({
           window.App.eventModal.hide();
         })
         .catch((error) => {
-          ({
-            message: this.errorMessage,
-            overlap_start: this.overlap_start,
-            overlap_end: this.overlap_end,
-          } = handleApiError(error));
+          this.errorMessage = handleApiError(error);
         })
         .finally(() => {
           this.isLoading = false;
@@ -137,22 +125,13 @@ export default (user, apiUrl) => ({
 });
 
 function handleApiError(error, action = "updateEvent") {
-  const result = {
-    message: error.data.message,
-    overlap_start: false,
-    overlap_end: false,
-  };
-
-  if (error.status == 409) {
-    result.overlap_start = error.data.details.overlap_start;
-    result.overlap_end = error.data.details.overlap_end;
-  }
+  const message = error.data?.message || "Unknown error";
 
   // log error
-  console.log(`${action}(): [${error.status}] ${result.message}`);
+  console.log(`${action}(): [${error.status}] ${message}`);
   console.log(JSON.stringify(error.data));
 
-  return result;
+  return message;
 }
 
 async function api(url, method = "get", body) {

@@ -67,7 +67,7 @@
             method="post"
             id="add-event-form-modal"
             x-data="calEvent(App.user, App.apiUrl)"
-            @set_event="event = $event.detail; errorMessage = ''; overlap_start = false; overlap_end = false;"
+            @set_event="event = $event.detail; errorMessage = '';"
             @set_user="user = $event.detail"
           >
             <div class="modal-body" style="min-height: 150px">
@@ -79,8 +79,7 @@
                     class="form-control"
                     name="start"
                     x-model="event.start"
-                    :class="{'is-invalid': overlap_start}"
-                    @change="overlap_start = false; !overlap_end && (errorMessage = '');"
+                    @change="errorMessage = '';"
                   />
                 </div>
 
@@ -91,8 +90,7 @@
                     class="form-control"
                     name="end"
                     x-model="event.endIncl"
-                    :class="{'is-invalid': overlap_end}"
-                    @change="overlap_end = false; !overlap_start && (errorMessage = '');"
+                    @change="errorMessage = '';"
                   />
                 </div>
               </div>
