@@ -12,7 +12,7 @@ const { v4: uuidv4 } = require("uuid");
 const dayjs = require("dayjs");
 const { UsersModel: Users } = require("./users.model");
 const { initDB } = require("../db2");
-const i18n = require("../i18n");
+import i18n from "../i18n";
 const { getEnv } = require("../secrets");
 
 const maxDays = 90;
@@ -84,12 +84,14 @@ export class EventsModelNoLock {
       );
     }
 
-    // query db with start-date-index: PK = 'EVENT', FROM < start-date < TO
+    // query db with start-date-index: PK = 'EVENT', startDate <= end
+    // This gets all events that start before or during the requested period
     const queryInput = {
       TableName: this.#db.tableName,
       IndexName: "startDateIndex",
       KeyConditionExpression:
-        "#PK = :PK AND (startDate BETWEEN :start AND :end)",
+        "#PK = :PK AND startDate <= :end",
+      FilterExpression: "endDate > :start",
       ExpressionAttributeValues: {
         ":PK": "EVENT",
         ":start": start,
