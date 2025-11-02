@@ -15,6 +15,7 @@ const events = new EventsModelNoLock();
 const app = new Hono<{ Variables: Variables }>();
 
 app.get("/", async (c) => {
+  const logger = c.get("logger");
   const validatedQuery = c.get("validatedData").query;
   const result = await events.list(
     Array.isArray(validatedQuery.start)
@@ -32,7 +33,7 @@ app.get("/", async (c) => {
     return event;
   });
 
-  console.log("List events result:", eventsWithColors);
+  logger.debug("List events", { count: eventsWithColors.length });
   return c.json(eventsWithColors);
 });
 

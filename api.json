@@ -15,8 +15,7 @@
             "in": "query",
             "name": "start",
             "schema": {
-              "type": "string",
-              "pattern": "^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2} [+-]?\\d{2}:\\d{2})?$"
+              "type": "string"
             },
             "description": "Start date (YYYY-MM-DD or ISO 8601 datetime)",
             "required": true
@@ -25,8 +24,7 @@
             "in": "query",
             "name": "end",
             "schema": {
-              "type": "string",
-              "pattern": "^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2} [+-]?\\d{2}:\\d{2})?$"
+              "type": "string"
             },
             "description": "End date (YYYY-MM-DD or ISO 8601 datetime)",
             "required": true
@@ -34,12 +32,34 @@
         ],
         "responses": {
           "200": {
-            "description": "List events",
+            "description": "List of events in the specified date range",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "array",
                   "items": { "$ref": "#/components/schemas/Event" }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing or invalid query parameters",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "example": {
+                  "message": "Bitte geben Sie die Start- und End-Abfrageparameter an."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - no valid access_token cookie",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "example": {
+                  "message": "Unberechtigt."
                 }
               }
             }
@@ -67,14 +87,76 @@
         },
         "responses": {
           "201": {
-            "description": "Create an event",
+            "description": "Event created successfully",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/Event" }
               }
             }
           },
-          "400": { "description": "Bad request" }
+          "400": {
+            "description": "Bad request - validation error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "examples": {
+                  "minDays": {
+                    "summary": "Event duration less than minimum (2 days)",
+                    "value": {
+                      "message": "Reservation ist weniger als das Minimum von 2 Tagen.",
+                      "cause": { "minDays": 2 }
+                    }
+                  },
+                  "maxDays": {
+                    "summary": "Event duration exceeds maximum (90 days)",
+                    "value": {
+                      "message": "Reservation überschreitet das Maximum von 90 Tagen.",
+                      "cause": { "maxDays": 90 }
+                    }
+                  },
+                  "missingFields": {
+                    "summary": "Missing required fields",
+                    "value": {
+                      "message": "Start und Ende der Reservation erforderlich."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - no valid access_token cookie",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "example": {
+                  "message": "Unberechtigt."
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - cannot create event for another user",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "example": {
+                  "message": "Unberechtigt."
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - event overlaps with existing event",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "example": {
+                  "message": "Reservation überschneidet sich mit bestehender Reservation."
+                }
+              }
+            }
+          }
         },
         "x-amazon-apigateway-integration": {
           "uri": {
@@ -108,10 +190,83 @@
         },
         "responses": {
           "200": {
-            "description": "Updated an event",
+            "description": "Event updated successfully",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/Event" }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - validation error or event not found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "examples": {
+                  "notFound": {
+                    "summary": "Event not found",
+                    "value": {
+                      "message": "Reservation nicht gefunden."
+                    }
+                  },
+                  "idMismatch": {
+                    "summary": "ID in path doesn't match body",
+                    "value": {
+                      "message": "ID stimmt nicht überein."
+                    }
+                  },
+                  "minDays": {
+                    "summary": "Event duration less than minimum (2 days)",
+                    "value": {
+                      "message": "Reservation ist weniger als das Minimum von 2 Tagen.",
+                      "cause": { "minDays": 2 }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - no valid access_token cookie",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "example": {
+                  "message": "Unberechtigt."
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - cannot update another user's event",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "example": {
+                  "message": "Unberechtigt."
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - event was updated by another user or overlaps",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "examples": {
+                  "versionConflict": {
+                    "summary": "Event was updated by another user",
+                    "value": {
+                      "message": "Reservation wurde von einem anderen Benutzer aktualisiert."
+                    }
+                  },
+                  "overlap": {
+                    "summary": "Updated event overlaps with existing event",
+                    "value": {
+                      "message": "Reservation überschneidet sich mit bestehender Reservation."
+                    }
+                  }
+                }
               }
             }
           }
@@ -135,7 +290,65 @@
             "schema": { "type": "string" }
           }
         ],
-        "responses": { "200": { "description": "Event deleted" } },
+        "responses": {
+          "200": {
+            "description": "Event deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "Event deleted" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - event not found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "example": {
+                  "message": "Reservation nicht gefunden."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - no valid access_token cookie",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "example": {
+                  "message": "Unberechtigt."
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - cannot delete another user's event",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "example": {
+                  "message": "Unberechtigt."
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - event was updated by another user",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "example": {
+                  "message": "Reservation wurde von einem anderen Benutzer aktualisiert."
+                }
+              }
+            }
+          }
+        },
         "x-amazon-apigateway-integration": {
           "uri": {
             "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${calApi.Arn}/invocations"
@@ -160,6 +373,28 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Unauthorized - no valid access_token cookie",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "example": {
+                  "message": "Unberechtigt."
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - requires admin role",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "example": {
+                  "message": "Unberechtigt."
+                }
+              }
+            }
           }
         },
         "x-amazon-apigateway-integration": {
@@ -177,10 +412,21 @@
         "summary": "Authenticate a user",
         "responses": {
           "200": {
-            "description": "User authenticated",
+            "description": "User authenticated - returns current user info",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/User" }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - no valid access_token cookie",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "example": {
+                  "message": "Unberechtigt."
+                }
               }
             }
           }
@@ -214,6 +460,42 @@
               }
             },
             "headers": { "Set-Cookie": { "schema": { "type": "string" } } }
+          },
+          "400": {
+            "description": "User not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string" },
+                    "cause": { "type": "string", "example": "USER_NOT_FOUND" }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Google Auth JWT verification failed",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "example": {
+                  "message": "Failed to verify Google Auth JWT"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable - Admin user must provide Google Auth JWT",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "example": {
+                  "message": "Admin users must provide a Google Auth JWT"
+                }
+              }
+            }
           }
         },
         "x-amazon-apigateway-integration": {
@@ -230,7 +512,22 @@
       "get": {
         "security": [{ "cookieAuth": [] }],
         "summary": "Get prices",
-        "responses": { "200": { "description": "Get prices" } },
+        "responses": {
+          "200": {
+            "description": "Pricing information retrieved successfully"
+          },
+          "401": {
+            "description": "Unauthorized - no valid access_token cookie",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "example": {
+                  "message": "Unberechtigt."
+                }
+              }
+            }
+          }
+        },
         "x-amazon-apigateway-integration": {
           "uri": {
             "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${calApi.Arn}/invocations"
@@ -244,7 +541,22 @@
       "post": {
         "security": [{ "apiKeyAuth": [] }],
         "summary": "Backup events",
-        "responses": { "200": { "description": "Backup events" } },
+        "responses": {
+          "200": {
+            "description": "Events backed up successfully"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing x-api-token header",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "example": {
+                  "message": "Unberechtigt."
+                }
+              }
+            }
+          }
+        },
         "x-amazon-apigateway-integration": {
           "uri": {
             "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${BackupEventsLockDbFunction.Arn}/invocations"
@@ -258,7 +570,22 @@
       "post": {
         "security": [{ "apiKeyAuth": [] }],
         "summary": "Restore events",
-        "responses": { "200": { "description": "Restore events" } },
+        "responses": {
+          "200": {
+            "description": "Events restored successfully"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing x-api-token header",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "example": {
+                  "message": "Unberechtigt."
+                }
+              }
+            }
+          }
+        },
         "x-amazon-apigateway-integration": {
           "uri": {
             "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${BackupEventsLockDbFunction.Arn}/invocations"
@@ -319,6 +646,19 @@
           "gooleAuthJWT": { "type": "string" }
         },
         "required": ["name"]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "message": { "type": "string", "description": "Human-readable error message (i18n)" },
+          "cause": {
+            "oneOf": [
+              { "type": "string", "description": "Error code as string (e.g., USER_NOT_FOUND)" },
+              { "type": "object", "description": "Error details object" }
+            ]
+          }
+        },
+        "required": ["message"]
       }
     },
     "securitySchemes": {

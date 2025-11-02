@@ -79,18 +79,18 @@ export default (apiUrl) => ({
       } else {
         if (response.status == 400) {
           this.tokenNeeded = false;
-          switch (data.code) {
-            case "auth-010":
+          switch (data.cause) {
+            case "INVALID_PASSWORD":
               this.credentials.password.errorMessage = "Wrong password";
               this.credentials.password.invalid = true;
               break;
-            case "auth-011":
+            case "USER_NOT_FOUND":
               this.credentials.username.errorMessage = "Unknown user";
               this.credentials.username.invalid = true;
               this.credentials.password.value = "";
               this.passwordNeeded = false;
               break;
-            case "auth-012":
+            case "ADMIN_PASSWORD_REQUIRED":
               this.errorMessage = "Admin user must have a password";
               this.passwordNeeded = true;
               this.credentials.stayLoggedIn = false;

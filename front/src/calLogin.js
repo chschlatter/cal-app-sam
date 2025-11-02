@@ -33,7 +33,7 @@ export default (apiUrl) => ({
         switch (response.status) {
           // Not Found
           case 400:
-            if (data.code === "auth-001") {
+            if (data.cause === "USER_NOT_FOUND") {
               this.$store.username.errorMessage = data.message;
               this.$store.username.invalid = true;
             } else {

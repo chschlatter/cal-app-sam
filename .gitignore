@@ -4,4 +4,4 @@ node_modules
 .vscode
 front/dist/*.js
 front/dist/*.txt
-
+build

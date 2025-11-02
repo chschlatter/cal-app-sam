@@ -13,7 +13,6 @@ window.App.apiUrl = "/api2";
  * redirect to login page if not authenticated
  * if authenticated:
  *   set window.App.user
- *   warmup api
  *   call init()
  */
 fetch(`${window.App.apiUrl}/auth`)
@@ -25,22 +24,6 @@ fetch(`${window.App.apiUrl}/auth`)
   })
   .then((user) => {
     window.App.user = user;
-
-    // warmup api
-    const warmupPromise = Promise.all([
-      fetch(`${window.App.apiUrl}/events?warmup=true`, { method: "post" }),
-      fetch(`${window.App.apiUrl}/events/XXX?warmup=true`, { method: "put" }),
-      fetch(`${window.App.apiUrl}/events/XXX?warmup=true`, {
-        method: "delete",
-      }),
-    ]);
-    warmupPromise
-      .then((responses) => {
-        console.log("API warmup completed");
-      })
-      .catch((error) => {
-        console.log("warmup: " + error.message);
-      });
 
     document.querySelector("html").style.visibility = "visible";
 

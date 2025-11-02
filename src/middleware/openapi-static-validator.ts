@@ -7,6 +7,7 @@ import {
   type ValidateRequestResult,
 } from "build/validator";
 import isDate from "validator/es/lib/isDate";
+import type { Variables } from "../handlers/types";
 
 const jsonRegex =
   /^application\/([a-z-\.]+\+)?json(;\s*[a-zA-Z0-9\-]+\=([^;]+))*$/;
@@ -20,10 +21,9 @@ const stringFormats = {
 };
 
 export const openApiStaticValidator = createMiddleware<{
-  Variables: {
-    validatedData: ValidateRequestResult;
-  };
+  Variables: Variables;
 }>(async (c, next) => {
+  const logger = c.get("logger");
   let body = undefined;
   const contentType = c.req.header("Content-Type");
   const contentLength = c.req.header("Content-Length");
@@ -36,7 +36,9 @@ export const openApiStaticValidator = createMiddleware<{
         body = JSON.parse(text);
       }
     } catch (e) {
-      console.error("Failed to parse JSON body:", e);
+      logger.error("Failed to parse JSON body", {
+        error: e instanceof Error ? e.message : String(e),
+      });
       const message = "Invalid JSON body";
       throw new HTTPException(400, {
         message,
@@ -52,10 +54,10 @@ export const openApiStaticValidator = createMiddleware<{
 
   // Debug logging for date parameters
   if (query.start) {
-    console.log("Query param 'start':", query.start, "Type:", typeof query.start);
+    logger.debug("Query param 'start'", { value: query.start, type: typeof query.start });
   }
   if (query.end) {
-    console.log("Query param 'end':", query.end, "Type:", typeof query.end);
+    logger.debug("Query param 'end'", { value: query.end, type: typeof query.end });
   }
 
   const validatedData = validateRequest(

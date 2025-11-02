@@ -7,23 +7,28 @@ import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
 import { sign } from "hono/jwt";
 import { setCookie } from "hono/cookie";
 
+const i18n = require("../../i18n");
+
 // Initialize Lambda client during cold start
 const lambdaClient = new LambdaClient({});
 
 const app = new Hono<{ Variables: Variables }>();
 
 app.post("/", async (c) => {
-  console.log("Login request received");
+  const logger = c.get("logger");
   const validatedBody = c.get("validatedData").body;
-  console.log("Login request body:", validatedBody);
+  logger.debug("Login request", { username: validatedBody.name });
+
   const { name, stayLoggedIn, googleAuthJWT } = validatedBody; // stayLoggedIn and googleAuthJWT are optional
   const user = new Users().getUser(name);
   if (!user) {
-    throw new HTTPException(404, {
-      message: `User ${name} not found`,
+    // Return 400 with cause "USER_NOT_FOUND" as expected by frontend (calLogin.js)
+    throw new HTTPException(400, {
+      message: i18n.t("error.userNotFound"),
+      cause: "USER_NOT_FOUND",
     });
   }
-  console.log("User found:", user);
+  logger.debug("User found", { username: user.name, role: user.role });
 
   // Admin users must authenticate with Google OAuth
   if (user.role === "admin") {
@@ -56,7 +61,9 @@ app.post("/", async (c) => {
       if (error instanceof HTTPException) {
         throw error;
       }
-      console.error("Error verifying Google token:", error);
+      logger.error("Error verifying Google token", {
+        error: error instanceof Error ? error.message : String(error),
+      });
       throw new HTTPException(403, {
         message: "Failed to verify Google Auth JWT",
       });
@@ -70,7 +77,7 @@ app.post("/", async (c) => {
       Math.floor(Date.now() / 1000) +
       (stayLoggedIn ? 60 * 60 * 24 * 300 : 60 * 60), // 300 days or 1 hour
   };
-  console.log("JWT payload:", jwtPayload);
+  logger.debug("JWT created", { username: user.name, expiresIn: stayLoggedIn ? "300 days" : "1 hour" });
   const token = await sign(jwtPayload, getSecret("JWT_SECRET"));
   setCookie(c, "access_token", token, {
     httpOnly: true,
