@@ -44,15 +44,6 @@ Conditions:
     - test
 
 Resources:
-  LlrtLayer:
-    Type: AWS::Serverless::LayerVersion
-    Properties:
-      ContentUri: ./llrt-lambda-x64.zip
-      CompatibleRuntimes:
-        - provided.al2023
-      CompatibleArchitectures:
-        - x86_64
-
   # DynamoDB table to store events with LSI for start-date
   DbEventsNoLockTable:
     Type: AWS::DynamoDB::Table
@@ -87,21 +78,38 @@ Resources:
     Properties:
       Handler: src/handlers/calApi.handler
       Description: API Gateway for the calendar app
-      Runtime: provided.al2023
-      Layers:
-        - !Ref LlrtLayer
+      Runtime: nodejs22.x
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref EventsNoLockTable
-        - LambdaInvokePolicy:
-            FunctionName: !Ref verifyGoogleToken
       Environment:
         Variables:
           EVENTS_TABLE: !Ref EventsNoLockTable
           GOOGLE_CLIENT_ID: "{{resolve:ssm:/cal-app-sam/GOOGLE_CLIENT_ID}}"
-          VERIFY_GOOGLE_TOKEN_FUNCTION: !Ref verifyGoogleToken
       Events:
-        Api:
+        RootPath:
+          Type: Api
+          Properties:
+            Path: /
+            Method: GET
+            Auth:
+              ResourcePolicy:
+                CustomStatements:
+                  - Effect: Allow
+                    Principal: "*"
+                    Action: execute-api:Invoke
+                    Resource: execute-api:/*
+        LoginPath:
+          Type: Api
+          Properties:
+            Path: /login
+            Method: ANY
+        LoginProxy:
+          Type: Api
+          Properties:
+            Path: /login/{proxy+}
+            Method: ANY
+        Api2Proxy:
           Type: Api
           Properties:
             Path: /api2/{proxy+}
@@ -110,22 +118,25 @@ Resources:
       BuildMethod: esbuild
       BuildProperties:
         External: ["@aws-sdk"]
-        Minify: false
-        Target: "es2023"
-        SourceMap: false
-        Format: esm
-        OutExtension:
-          - .js=.mjs
 
-  # Lambda function to verify Google OAuth tokens (uses standard Node.js runtime)
-  verifyGoogleToken:
+  # Lambda function for Google Sign-In authentication endpoint
+  loginGSI:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: src/handlers/verifyGoogleToken.handler
-      Description: Verify Google OAuth ID tokens using google-auth-library
+      Handler: src/handlers/loginGSI.handler
+      Description: Handle Google Sign-In authentication and return JWT cookie
       Runtime: nodejs22.x
       Timeout: 10
       MemorySize: 256
+      Environment:
+        Variables:
+          GOOGLE_CLIENT_ID: "{{resolve:ssm:/cal-app-sam/GOOGLE_CLIENT_ID}}"
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /api2/loginGSI
+            Method: POST
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -167,7 +178,7 @@ Resources:
           Properties:
             Schedule: cron(0 3 * * ? *) # every day at 3am
             Name: !Sub "DailyBackupSchedule-${EnvType}"
-            Description: "Trigger BackupEventsLockDbFunction once per day"
+            Description: "Trigger BackupEventsLockDbFunction once per day."
             Input: '{"type": "backup"}'
     Metadata:
       BuildMethod: esbuild
@@ -178,157 +189,10 @@ Resources:
   BackupS3Bucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub "${AWS::StackName}-backups"
+      BucketName: !Sub "${AWS::StackName}-backups-${AWS::AccountId}"
       AccessControl: Private
-
-  # S3 bucket to store the web application (Dev)
-  # with a policy to allow access from cloudfront (no public access)
-  WebAppS3Bucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: !Sub "${AWS::StackName}-frontend"
-      AccessControl: Private
-      WebsiteConfiguration:
-        IndexDocument: index.html
-        ErrorDocument: index.html
-
-  WebAppS3BucketPolicy:
-    Type: AWS::S3::BucketPolicy
-    Properties:
-      Bucket: !Ref WebAppS3Bucket
-      PolicyDocument:
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: cloudfront.amazonaws.com
-            Action: s3:GetObject
-            Resource: !Sub "arn:aws:s3:::${WebAppS3Bucket}/*"
-            Condition:
-              StringEquals:
-                AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${WebAppCloudFrontDistribution}"
-
-  # CloudFront function to rewrite login path
-  RewriteLoginFunction:
-    Type: AWS::CloudFront::Function
-    Properties:
-      AutoPublish: true
-      Name: !Sub "${AWS::StackName}-RewriteLoginFunction"
-      FunctionConfig:
-        Comment: "Rewrite login path"
-        Runtime: cloudfront-js-2.0
-      FunctionCode: |
-        function handler(event) {
-          const request = event.request;
-          const uri = request.uri;
-          if (uri === "/login") {
-            request.uri = '/login.html';
-          }
-          return request;
-        }
-
-  # CloudFront access control for s3 bucket
-  WebAppS3BucketOAC:
-    Type: AWS::CloudFront::OriginAccessControl
-    Properties:
-      OriginAccessControlConfig:
-        Name: !Sub "OAC/${WebAppS3Bucket}"
-        OriginAccessControlOriginType: s3
-        SigningBehavior: always
-        SigningProtocol: sigv4
-
-  # CloudFront distribution to serve the web application (Dev)
-  WebAppCloudFrontDistribution:
-    Type: AWS::CloudFront::Distribution
-    Properties:
-      DistributionConfig:
-        Origins:
-          - DomainName: !GetAtt WebAppS3Bucket.RegionalDomainName
-            Id: S3Origin
-            S3OriginConfig:
-              OriginAccessIdentity: ""
-            OriginAccessControlId: !GetAtt WebAppS3BucketOAC.Id
-          # API Gateway endpoint
-          - DomainName: !Sub "${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com"
-            Id: ApiGatewayOrigin
-            OriginPath: "/Prod"
-            CustomOriginConfig:
-              HTTPPort: 80
-              HTTPSPort: 443
-              OriginProtocolPolicy: https-only
-        Enabled: true
-        Aliases:
-          - !Ref CFDistCNAME
-        ViewerCertificate:
-          AcmCertificateArn: !Ref CFDistViewerCertificate
-          SslSupportMethod: sni-only
-          MinimumProtocolVersion: TLSv1.2_2019
-        DefaultRootObject: index.html
-        DefaultCacheBehavior:
-          AllowedMethods:
-            - GET
-            - HEAD
-            - OPTIONS
-          TargetOriginId: S3Origin
-          ForwardedValues:
-            QueryString: false
-          ViewerProtocolPolicy: redirect-to-https
-          # managed cache policy CachingDisabled
-          CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
-          FunctionAssociations:
-            - EventType: viewer-request
-              FunctionARN: !GetAtt RewriteLoginFunction.FunctionMetadata.FunctionARN
-        CacheBehaviors:
-          - PathPattern: /api/*
-            # [HEAD, DELETE, POST, GET, OPTIONS, PUT, PATCH]
-            AllowedMethods:
-              - HEAD
-              - DELETE
-              - POST
-              - GET
-              - OPTIONS
-              - PUT
-              - PATCH
-            TargetOriginId: ApiGatewayOrigin
-            ForwardedValues:
-              QueryString: true
-            ViewerProtocolPolicy: redirect-to-https
-            # managed cache policy CachingDisabled
-            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
-            # managed origin request policy AllViewerExceptHostHeader
-            # see https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/using-managed-origin-request-policies.html#managed-origin-request-policy-all-viewer-except-host-header
-            OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
-          - PathPattern: /api2/*
-            # [HEAD, DELETE, POST, GET, OPTIONS, PUT, PATCH]
-            AllowedMethods:
-              - HEAD
-              - DELETE
-              - POST
-              - GET
-              - OPTIONS
-              - PUT
-              - PATCH
-            TargetOriginId: ApiGatewayOrigin
-            ForwardedValues:
-              QueryString: true
-            ViewerProtocolPolicy: redirect-to-https
-            # managed cache policy CachingDisabled
-            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
-            # managed origin request policy AllViewerExceptHostHeader
-            # see https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/using-managed-origin-request-policies.html#managed-origin-request-policy-all-viewer-except-host-header
-            OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
-        PriceClass: PriceClass_100
-        CustomErrorResponses:
-          - ErrorCode: 404
-            ResponseCode: 200
-            ResponsePagePath: /index.html
 
 Outputs:
   WebEndpoint:
     Description: "API Gateway endpoint URL for Prod stage"
     Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
-  WebAppS3Bucket:
-    Description: "S3 bucket for the web application"
-    Value: !Ref WebAppS3Bucket
-  WebAppCloudFrontDistribution:
-    Description: "CloudFront distribution for the web application"
-    Value: !Ref WebAppCloudFrontDistribution

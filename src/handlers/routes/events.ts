@@ -1,5 +1,7 @@
 import { Hono } from "hono";
 import type { Variables } from "../types";
+import * as v from "valibot";
+import { sValidator } from "@hono/standard-validator";
 import { HTTPException } from "hono/http-exception";
 import {
   EventsModelNoLock,
@@ -14,17 +16,23 @@ const events = new EventsModelNoLock();
 
 const app = new Hono<{ Variables: Variables }>();
 
-app.get("/", async (c) => {
+// Validation schemas
+const listEventsQuerySchema = v.object({
+  start: v.string(),
+  end: v.string(),
+});
+
+const createEventBodySchema = v.object({
+  title: v.pipe(v.string(), v.minLength(1), v.maxLength(20)),
+  start: v.pipe(v.string(), v.isoDate()),
+  end: v.pipe(v.string(), v.isoDate()),
+});
+
+// GET / - List events
+app.get("/", sValidator("query", listEventsQuerySchema), async (c) => {
   const logger = c.get("logger");
-  const validatedQuery = c.get("validatedData").query;
-  const result = await events.list(
-    Array.isArray(validatedQuery.start)
-      ? validatedQuery.start[0]
-      : validatedQuery.start,
-    Array.isArray(validatedQuery.end)
-      ? validatedQuery.end[0]
-      : validatedQuery.end
-  );
+  const validatedQuery = c.req.valid("query");
+  const result = await events.list(validatedQuery.start, validatedQuery.end);
 
   // Add colors to events based on user
   const users = new Users();
@@ -37,8 +45,9 @@ app.get("/", async (c) => {
   return c.json(eventsWithColors);
 });
 
-app.post("/", async (c) => {
-  const validatedBody = c.get("validatedData").body;
+// POST / - Create new event
+app.post("/", sValidator("json", createEventBodySchema), async (c) => {
+  const validatedBody = c.req.valid("json");
   const jwtPayload = c.get("jwtPayload");
 
   const newEvent: Event = {

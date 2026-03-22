@@ -34,6 +34,7 @@ const phrases = {
     "error.userNotFound": "User not found.",
     "error.missingGoogleAuth": "Missing Google authentication.",
     "error.unknownEventError": "Unknown EventError [%{message}].",
+    "info.googleSignInRequired": "Google Sign-In is required for admin users.",
   },
   de_CH: {
     "error.internalServerError": "Interner Serverfehler.",
@@ -74,6 +75,8 @@ const phrases = {
     "error.userNotFound": "Benutzer nicht gefunden.",
     "error.missingGoogleAuth": "Fehlende Google-Authentifizierung.",
     "error.unknownEventError": "Unbekannter EventError [%{message}].",
+    "info.googleSignInRequired":
+      "Google Sign-In ist für Admin-Benutzer erforderlich.",
   },
 };
 

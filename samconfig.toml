@@ -20,6 +20,7 @@ resolve_s3 = true
 s3_prefix = "cal-app-sam-dev"
 region = "eu-central-2"
 image_repositories = []
+profile = "default"
 
 [default.package.parameters]
 resolve_s3 = true
@@ -51,6 +52,7 @@ resolve_s3 = true
 s3_prefix = "cal-app-sam"
 region = "eu-central-2"
 image_repositories = []
+profile = "prod"
 
 [prod.package.parameters]
 resolve_s3 = true
