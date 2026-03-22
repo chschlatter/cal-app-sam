@@ -1,0 +1,9 @@
+/cal-app-sam/GOOGLE_CLIENT_ID
+526294920927-4mbsla2r4dkrk1t3if5976ss1pnvro2t.apps.googleusercontent.com
+
+/cal-app-sam/API_TOKEN
+
+
+/cal-app-sam/JWT_SECRET
+
+
