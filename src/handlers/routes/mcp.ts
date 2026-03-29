@@ -5,6 +5,7 @@ import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/
 import { z } from "zod";
 import { EventsModelNoLock } from "../../model/events.model-DynNoLock";
 import { PricingService } from "../../lib/pricing";
+import { UsersModel } from "../../model/users.model";
 
 const app = new Hono();
 
@@ -55,6 +56,21 @@ function createMcpServer(): McpServer {
         PricingService.getInstance().calculateCostAndNights(start, end), null, 2
       )}],
     })
+  );
+
+  const usersModel = new UsersModel();
+  server.registerTool(
+    "list_users",
+    {
+      description: "List all users with their name, role, and color (no credentials)",
+    },
+    () => {
+      const users = usersModel.getUsers();
+      const result = Object.values(users).map(({ name, role, color }) => ({ name, role, color }));
+      return {
+        content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
+      };
+    }
   );
 
   server.registerTool(
