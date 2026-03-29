@@ -200,6 +200,13 @@ export class PricingService {
   }
 
   /**
+   * Returns the raw price data sorted by date (newest first)
+   */
+  getPriceData(): PriceData[] {
+    return this.priceData;
+  }
+
+  /**
    * Convenience method: calculate and format in one call
    */
   getPriceString(startDate: string | Date, endDate: string | Date): string {

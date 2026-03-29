@@ -13,6 +13,7 @@ import indexPageRoutes from "./routes/indexPage";
 import eventsRoutes from "./routes/events";
 import loginRoutes from "./routes/login";
 import eventFormRoutes from "./routes/eventForm";
+import mcpRoutes from "./routes/mcp";
 
 // Import pricing service and data
 import prices from "../../prices.json";
@@ -45,6 +46,12 @@ app
     )
       return next();
 
+    // Skip JWT for GET /api2/events with valid Claude token
+    if (c.req.path === "/api2/events" && c.req.method === "GET") {
+      const token = c.req.header("x-api-token");
+      if (token && token === process.env.CLAUDE_TOKEN) return next();
+    }
+
     // Apply JWT middleware for / and /api2/* routes
     if (c.req.path === "/" || c.req.path.startsWith("/api2/")) {
       try {
@@ -72,7 +79,8 @@ app
   .route("/", indexPageRoutes)
   .route("/login", loginRoutes)
   .route("/api2/events", eventsRoutes)
-  .route("/api2/event/form", eventFormRoutes);
+  .route("/api2/event/form", eventFormRoutes)
+  .route("/mcp", mcpRoutes);
 
 app.onError((err, c) => {
   const errorResponse = {

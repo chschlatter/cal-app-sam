@@ -86,6 +86,7 @@ Resources:
         Variables:
           EVENTS_TABLE: !Ref EventsNoLockTable
           GOOGLE_CLIENT_ID: "{{resolve:ssm:/cal-app-sam/GOOGLE_CLIENT_ID}}"
+          CLAUDE_TOKEN: !Sub "{{resolve:ssm:/${AWS::StackName}/CLAUDE_TOKEN}}"
       Events:
         RootPath:
           Type: Api
@@ -113,6 +114,11 @@ Resources:
           Type: Api
           Properties:
             Path: /api2/{proxy+}
+            Method: ANY
+        McpProxy:
+          Type: Api
+          Properties:
+            Path: /mcp/{proxy+}
             Method: ANY
     Metadata:
       BuildMethod: esbuild
